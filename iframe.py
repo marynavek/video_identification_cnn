@@ -64,50 +64,50 @@ def main(argv):
     frames_saved = 0
     count = 0
 
-    while cap.isOpened():
-        # Extract the frame
-        ret, frame = cap.read()
+    # while cap.isOpened():
+    #     # Extract the frame
+    #     ret, frame = cap.read()
 
-        # Frame is available
-        if ret:
-            # Get current frame id
-            frame_id = cap.get(1)
+    #     # Frame is available
+    #     if ret:
+    #         # Get current frame id
+    #         frame_id = cap.get(1)
 
             
-            save_frame = frame_id % mod == 0
+    #         save_frame = frame_id % mod == 0
 
-            # Write frame to disk
-            if save_frame:
-                # Check whether we have to resize or crop the frame
-                cv2.imwrite(oPath + f"/{oString}-" + "%#05d.jpg" % frame_id, frame)
-                frames_saved = frames_saved + 1
-        count += 1
+    #         # Write frame to disk
+    #         if save_frame:
+    #             # Check whether we have to resize or crop the frame
+    #             cv2.imwrite(oPath + f"/{oString}-" + "%#05d.jpg" % frame_id, frame)
+    #             frames_saved = frames_saved + 1
+    #     count += 1
 
-        if (frames_saved >= number_of_frames_to_save or count >= video_length):
-            # Release the feed
-            if cap.isOpened():
-                cap.release()
+    #     if (frames_saved >= number_of_frames_to_save or count >= video_length):
+    #         # Release the feed
+    #         if cap.isOpened():
+    #             cap.release()
 
-            break
+    #         break
 
     # return frames_saved
     # # home = os.path.expanduser("~")
     # print("Path at terminal when executing this file")
     # home = os.path.expanduser("~")
     # print(home)
-    # ffmpeg = '/usr/local/bin/ffmpeg'
+    ffmpeg = '/usr/bin/ffmpeg'
     # # path = os.path.join(os.getcwd() + ffmpeg)
     # # os.mkdir(path)
-    # outFile = oString + '%03d.png'
-    # outFilePath = os.path.join(oPath, outFile)
+    outFile = oString + '%03d.jpg'
+    outFilePath = os.path.join(oPath, outFile)
     
-    # cmd = [ffmpeg,'-i', inFile,'-f', 'image2','-vf', 
-    #            "select='eq(pict_type,PICT_TYPE_I)'",'-vsync','vfr',outFilePath]
+    cmd = [ffmpeg,'-i', inFile,'-f', 'image2','-vf', 
+               "select='eq(pict_type,PICT_TYPE_I)'",'-vsync','vfr',outFilePath]
 
     
-    
-    # print (cmd)
-    # subprocess.call(cmd)
+    print("hello")
+    print (cmd)
+    subprocess.call(cmd)
 
 if __name__ == "__main__":
 	main(sys.argv[1:])
