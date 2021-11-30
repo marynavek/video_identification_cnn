@@ -50,8 +50,9 @@ def copy_frames(src_path, dest_path, original_videos):
                     train_frames += 1
                     
 
-input_frames_dir = "/Users/marynavek/Projects/Video_Project/Frames"
-output_frames_dir = "/Users/marynavek/Projects/Video_Project/dataset"
+
+input_frames_dir = "/home/marynavek/Video_Project/files/IFrames"
+output_frames_dir = "/home/marynavek/Video_Project/files/iframes-dataset"
 
 if not os.path.exists(output_frames_dir):
         os.makedirs(output_frames_dir)

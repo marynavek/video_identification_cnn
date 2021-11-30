@@ -7,7 +7,7 @@ import numpy as np
 from constrained_net import ConstrainedNet
 from contrained_net_PRNU_transfer import ConstrainedNetPRNU
 from data_factory import DataFactory
-from keras import datasets
+# from keras import datasets
 parser = argparse.ArgumentParser(
     description='Train the constrained_net',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -34,8 +34,8 @@ def run_locally():
     # model_path = "/Users/marynavek/Projects/Video_Project/models/ccnn-FC2x1024-480_800-f3-k_s5/fm-e00003.h5"
     model_path = None
     model_name = None
-    dataset_path = "/Users/marynavek/Projects/Video_Project/dataset"
-    dataset_path_prnu = "/Users/marynavek/Projects/Video_Project/prnu"
+    dataset_path = "/home/marynavek/Video_Project/files/iframes-dataset"
+    dataset_path_prnu = "/home/marynavek/Video_Project/files/prnu_dataset-iframes"
 
     return fc_size, fc_layers, n_epochs, cnn_height, cnn_width, batch_size, use_constrained_layer, model_path, model_name, dataset_path, dataset_path_prnu
 

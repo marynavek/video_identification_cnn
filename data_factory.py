@@ -168,7 +168,7 @@ class DataFactory:
         print(f"Created val ({n_val_elements}) dataset ({int(time.time() - t_start)} sec.)")
 
         # Set batch and prefetch preferences
-        # train_ds = train_ds.batch(self.batch_size, drop_remainder=False)
+        train_ds = train_ds.batch(self.batch_size, drop_remainder=False)
         train_ds = train_ds.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
         # Set batch and prefetch preferences
@@ -195,7 +195,7 @@ class DataFactory:
 
         # Create labeled dataset by loading the image and estimating the label
         labeled_ds = tf_image_path_ds.map(self.process_path, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        labeled_ds = labeled_ds.batch(self.batch_size, drop_remainder=False)
+        # labeled_ds = labeled_ds.batch(self.batch_size, drop_remainder=False)
         labeled_ds = labeled_ds.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
         print(f"Finished loading test frames ({int(time.time() - t_start)} sec.)")
 
