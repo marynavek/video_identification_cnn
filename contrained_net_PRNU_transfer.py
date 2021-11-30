@@ -76,8 +76,8 @@ class Constrained3DKernelMinimalPRNU(Constraint):
 
 
 class ConstrainedNetPRNU:
-    GLOBAL_SAVE_MODEL_DIR = "/Users/marynavek/Projects/Video_Project/models_prnu/"
-    GLOBAL_TENSORBOARD_DIR = "/Users/marynavek/Projects/Video_Project/tensorboard_prnu/"
+    GLOBAL_SAVE_MODEL_DIR = "/home/marynavek/Video_Project/video_identification_cnn/models_transfer/"
+    GLOBAL_TENSORBOARD_DIR = "/home/marynavek/Video_Project/video_identification_cnn/tensorboard_transfer/"
 
     def __init__(self, model_path=None, constrained_net=True):
         self.use_TensorBoard = True
@@ -198,6 +198,8 @@ class ConstrainedNetPRNU:
 
         # model_prnu.add(Flatten())
         flatten_prnu = Flatten()(max_pool4_prnu)
+        dense_prnu = Dense(fc_size, activation=tf.keras.activations.tanh)(flatten_prnu)
+
 
         if self.constrained_net:
             conv2d_frames1 = Conv2D(filters=96, kernel_size=(7, 7), strides=(2, 2), padding="same")(cons_layer_frames)
@@ -227,30 +229,33 @@ class ConstrainedNetPRNU:
 
 
         flatten_frames = Flatten()(max_pool4_frames)
+        dense_frames = Dense(fc_size, activation=tf.keras.activations.tanh)(flatten_frames)
 
-        merge_layer = concatenate([flatten_frames, flatten_prnu], axis=1)
+        merge_layer = concatenate([dense_prnu, dense_frames], axis=1)
             
-        for i in range(fc_layers):
+        for i in range(fc_layers*2-1):
             # print(i)
             # print(fc_layers)
             if i == 0:
                 output_layer_frames_temp = Dense(fc_size, activation=tf.keras.activations.tanh)(merge_layer)
             else: 
-                output_layer_frames_temp = Dense(fc_size, activation=tf.keras.activations.tanh)(output_layer_frames_temp)
+                output_layer_frames_temp = Dense(fc_size, activation=tf.keras.activations.relu)(output_layer_frames_temp)
             # if i + 1 not in range(fc_layers):
                    
         final_frames_output_layer = output_layer_frames_temp    
 
-        # reshape_layer = Reshape((32, fc_size))(final_frames_output_layer)
-        dense_merged = Dense(num_output, activation=tf.keras.activations.softmax)(final_frames_output_layer)
+        dense_merged = Dense(num_output, activation=tf.keras.activations.linear)(final_frames_output_layer)
         model = Model(inputs=(input_layer_prnu, input_layer_frames), outputs=dense_merged)
 
         # See also learning rate scheduler at the bottom of this script.
-        opt = tf.keras.optimizers.SGD(learning_rate=0.001, momentum=0.95, decay=0.0005)
+        # opt = tf.keras.optimizers.SGD(learning_rate=0.001, momentum=0.95, decay=0.0005)
 
-        model.compile(loss=tf.keras.losses.categorical_crossentropy,
-                      optimizer=opt,
-                      metrics=tf.keras.metrics.Accuracy())
+        # model.compile(loss=tf.keras.losses.categorical_crossentropy,
+        #               optimizer=opt,
+        #               metrics=tf.keras.metrics.Accuracy())
+        model.compile(loss="binary_crossentropy",
+                      optimizer="adam",
+                      metrics=['accuracy'])
 
         if model_name is None:
             model_name = self.__generate_model_name(fc_layers, fc_size, height, width)
@@ -321,78 +326,113 @@ class ConstrainedNetPRNU:
         print(initial_epoch)
         print("total_epochs")
         
-        sent_train_1 = tfds.as_numpy(prnu_train_ds)
-        sent_train_2 = tfds.as_numpy(frames_train_ds)
+        #convert train dataset to numpy 
+        prnu_train = tfds.as_numpy(prnu_train_ds)
+        frames_train = tfds.as_numpy(frames_train_ds)
 
-        # images_prnu = np.array([])
-        # labels_prnu = np.array([])
-        # images_frames = np.array([])
-        # labels_frames = np.array([])
-        images_prnu = list()
-        labels_prnu = list()
-        images_frames = list()
-        labels_frames = list()
+        #convert validation dataset to numpy 
+        val_prnu_train = tfds.as_numpy(val_ds_test_prnu)
+        val_frames_train = tfds.as_numpy(val_ds_test_frames)
 
-        count = 0
-        prev_shape = 0
-        for ex in sent_train_1:
-            # if count == 0:
-            image, label = ex
-            current_shape = np.shape(image)
 
-            if count < 2561:
-                if prev_shape == 0 or prev_shape == current_shape:
+        train_array_lenght = len(frames_train)
+        val_array_lenght = len(val_frames_train)
+        train_array_lenght = 4352
+        val_array_lenght = len(val_frames_train)
+        print(train_array_lenght)
+        print(val_array_lenght)
 
-                    images_prnu.append(image)
-                    # images_prnu = np.append(images_prnu, image)
-                    # print(np.shape(image))
-                    # print(np.size(image))
-                    # labels_prnu = np.append(labels_prnu,label)
-                    labels_prnu.append(label)
-                    # print(np.shape(label))
-                    # print(np.size(label))
-                    prev_shape = current_shape
-                    count = count + 1
-            else: break
+        train_images_frames = np.empty((train_array_lenght, 480, 800, 3), dtype=np.uint8)
+        train_images_prnu = np.empty((train_array_lenght, 480, 800, 3), dtype=np.uint8)
+        train_labels = np.empty((train_array_lenght, 5), dtype=np.uint8)
+        # val_images_frames = np.empty((val_array_lenght, 480, 800, 3), dtype=np.uint8)
+        # val_images_prnu = np.empty((val_array_lenght, 480, 800, 3), dtype=np.uint8)
+        # val_labels = np.empty((val_array_lenght, 5), dtype=np.uint8)
+        # for i, fpath in enumerate(fpaths):
+        #     img = cv2.imread(fpath, cv2.CV_LOAD_IMAGE_COLOR)
+        #     data[i, ...] = img.transpose(2, 0, 1)
 
-        print(np.shape(images_prnu))
-        print(np.shape(labels_prnu))
-        print(np.size(images_prnu))
-        print(np.size(labels_prnu))
+        # count1 = 0
 
-        count2 = 0
-        prev_shape2 = 0
-        for ex in sent_train_2:
-            image, label = ex
-            current_shape2 = np.shape(image)
+        prev_shape1 = 0
+        print("Creating the data for train dataset")
+        for i, frame_datablock in enumerate(frames_train):
+            frame, frame_label = frame_datablock
+            # current_shape1 = np.shape(frame)
             # if count2 == 0:
-            if count2 < 2561:
-                if prev_shape2 == 0 or prev_shape2 == current_shape2:
-                    images_frames.append(image)
-                    labels_frames.append(label)
-                    prev_shape2 = current_shape2
-                    count2 = count2 + 1
-            else: break
-        
-        print(count)
-        print(count2)
-        
-        print(np.shape(images_frames))
-        print(np.shape(labels_frames))
-        print(np.size(images_frames))
-        print(np.size(labels_frames))
-        print("finished iterating")
+            # if count1 < 33:
+            # print(np.shape(frame))
+            # print(np.shape(frame_label))
+            # print(frame_label)
 
-        print("Start fitting")
+            # if prev_shape1 == 0 or prev_shape1 == current_shape1:
+            if i == 4352:
+                break
+            train_images_frames[i, ...] = frame
+            train_labels[i, ...] = frame_label
+            for prnu_datablock in prnu_train:
+                prnu, prnu_label = prnu_datablock
+                if (prnu_label==frame_label).all():
+                    train_images_prnu[i, ...] = prnu
+                    break
 
-        self.model.fit(x = [tf.stack(images_prnu), tf.stack(images_frames)],y = [tf.stack(labels_prnu),tf.stack(labels_frames)],
+        #             # prev_shape1 = current_shape1
+        #             # count1 = count1 + 1
+
+        print("Finished train creation")
+        # count2 = 0
+        # prev_shape2 = 0
+        print("Creating the data for validation dataset")
+        # for i, val_frame_datablock in enumerate(val_frames_train):
+
+        #     frame, frame_label = val_frame_datablock
+            
+        #     # if count2 == 0:
+        #     # if count2 < 33:
+        #     # print(np.shape(frame))
+        #     # print(np.shape(val_images_frames))
+        #     # print(frame_label)
+        #     # if prev_shape2 == 0 or prev_shape2 == current_shape2:
+        #     val_images_frames[i, ...] = frame
+        #     val_labels[i, ...] = frame_label
+        #     for prnu_datablock in val_prnu_train:
+        #         prnu, prnu_label = prnu_datablock
+        #         print(prnu_label)
+        #         if (prnu_label==frame_label).all():
+        #             val_images_prnu[i, ...] = prnu
+        #             break
+
+        #             # prev_shape2 = current_shape2
+        #             # count2 = count2 + 1
+        #     # else: break
+        print("Finished val creation")
+        print(np.shape(train_images_prnu))
+        print(np.shape(train_images_frames))
+        print(np.shape(train_labels))
+
+        # print(np.shape(val_images_prnu))
+        # print(np.shape(val_images_frames))
+        # print(np.shape(val_labels))
+
+        self.model.fit(x = [train_images_prnu, train_images_frames],y = train_labels,
                         batch_size=32,
-                        epochs=5,
+                        epochs=epochs,
                         initial_epoch=initial_epoch,
-                        validation_split=0.2,
-                        callbacks=callbacks,
-                        workers=12,
-                        use_multiprocessing=True)  # we pass one data array per model input
+                        validation_split=0.15,
+                        # validation_data=([val_images_prnu,val_images_frames], val_labels),
+                        callbacks=callbacks)
+                        # workers=12,
+                        # use_multiprocessing=True)  # we pass one data array per model input
+
+        # self.model.fit(x = [train_images_prnu_stack, train_images_frames_stack],y = train_labels_stack,
+        #                 batch_size=32,
+        #                 epochs=5,
+        #                 initial_epoch=initial_epoch,
+        #                 validation_data=([val_images_prnu_stack,val_images_frames_stack], val_labels_stack),
+        #                 callbacks=callbacks,
+        #                 workers=12,
+        #                 use_multiprocessing=True)  # we pass one data array per model input
+
 
     def get_callbacks(self):
         default_file_name = "fm-e{epoch:05d}.h5"
