@@ -87,8 +87,8 @@ class ConstrainedNet:
         #     self.set_model(model_path)
 
         self.verbose = False
-        # self.model_name = "transfer_model"
-        self.model_name
+        self.model_name = "transfer_model"
+        # self.model_name = None
 
         # Constrained layer properties
         self.constrained_net = constrained_net
@@ -160,7 +160,7 @@ class ConstrainedNet:
 
         # Determine whether to use the input shape parameter
         if self.constrained_net:
-            model.add(Conv2D(filters=96, kernel_size=(7, 7), strides=(2, 2), padding="same"))
+            model.add(Conv2D(filters=96, kernel_size=(7, 7), strides=(2, 2), padding="same", name="first_conv"))
         else:
             model.add(Conv2D(filters=96, kernel_size=(7, 7), strides=(2, 2), padding="same", input_shape=input_shape))
 
@@ -168,20 +168,20 @@ class ConstrainedNet:
         model.add(Activation(tf.keras.activations.tanh))
         model.add(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)))
 
-        model.add(Conv2D(filters=64, kernel_size=(5, 5), strides=(1, 1), padding="same"))
+        model.add(Conv2D(filters=64, kernel_size=(5, 5), strides=(1, 1), padding="same",name="second_conv"))
         model.add(BatchNormalization())
         model.add(Activation(tf.keras.activations.tanh))
         model.add(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)))
         
         # model.add(SpatialDropout2D(0.5))    
         
-        model.add(Conv2D(filters=64, kernel_size=(5, 5), strides=(1, 1), padding="same"))
+        model.add(Conv2D(filters=64, kernel_size=(5, 5), strides=(1, 1), padding="same", name="third_conv"))
         model.add(BatchNormalization())
         model.add(Activation(tf.keras.activations.tanh))
         model.add(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)))
         # model.add(SpatialDropout2D(0.5))
 
-        model.add(Conv2D(filters=128, kernel_size=(1, 1), strides=(1, 1), padding="same"))
+        model.add(Conv2D(filters=128, kernel_size=(1, 1), strides=(1, 1), padding="same", name="forth_conv"))
         model.add(BatchNormalization())
         model.add(Activation(tf.keras.activations.tanh))
         model.add(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)))
@@ -303,8 +303,12 @@ class ConstrainedNet:
 
     def summarize_model(self, history, train_ds, val_ds):
 	# evaluate the model
-        _, train_acc = self.model.evaluate(train_ds, verbose=0)
-        _, test_acc = self.model.evaluate(val_ds, verbose=0)
+        if self.model:
+            _, train_acc = self.model.evaluate(train_ds, verbose=0)
+            _, test_acc = self.model.evaluate(val_ds, verbose=0)
+        else:
+            _, train_acc = self.transfer_model.evaluate(train_ds, verbose=0)
+            _, test_acc = self.transfer_model.model.evaluate(val_ds, verbose=0)
         print('Train: %.3f, Test: %.3f' % (train_acc, test_acc))
         # plot loss during training
         # pyplot.subplot(211)
@@ -335,6 +339,8 @@ class ConstrainedNet:
                 'Constrained3DKernelMinimal': Constrained3DKernelMinimal})
         # base_model = model(include_top=False, input_shape=input_shape)
         base_model = Model(inputs=model.input, outputs=model.layers[-4].output)
+        for layer in base_model.layers:
+            layer.trainable = False
         flatten = Flatten()(base_model.layers[-2].output)
         class1 = Dense(fc_size, activation=tf.keras.activations.tanh)(flatten)
         class2 = Dense(fc_size, activation=tf.keras.activations.tanh)(class1)
@@ -342,7 +348,7 @@ class ConstrainedNet:
         output = Dense(num_outputs, activation=tf.keras.activations.linear)(class2)
     
         self.transfer_model = Model(inputs=base_model.inputs, outputs=output)
-        opt = tf.keras.optimizers.SGD(learning_rate=0.001, momentum=0.95, decay=0.0005)
+        opt = tf.keras.optimizers.SGD(learning_rate=0.0001, momentum=0.95, decay=0.0005)
 
         self.transfer_model .compile(loss=tf.keras.losses.categorical_crossentropy,
                       optimizer=opt,

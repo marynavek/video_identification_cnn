@@ -132,7 +132,7 @@ class DataFactory:
         # Set batch and prefetch preferences
         print("batch size")
         print(self.batch_size)
-        # labeled_ds = labeled_ds.batch(self.batch_size, drop_remainder=False)
+        labeled_ds = labeled_ds.batch(self.batch_size, drop_remainder=False)
         labeled_ds = labeled_ds.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
         return labeled_ds
@@ -168,7 +168,7 @@ class DataFactory:
         print(f"Created val ({n_val_elements}) dataset ({int(time.time() - t_start)} sec.)")
 
         # Set batch and prefetch preferences
-        # train_ds = train_ds.batch(self.batch_size, drop_remainder=False)
+        train_ds = train_ds.batch(self.batch_size, drop_remainder=False)
         train_ds = train_ds.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
         # Set batch and prefetch preferences

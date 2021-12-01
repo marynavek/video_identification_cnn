@@ -35,8 +35,8 @@ def run_locally():
     # model_path = "/Users/marynavek/Projects/Video_Project/models/ccnn-FC2x1024-480_800-f3-k_s5/fm-e00003.h5"
     model_path = None
     model_name = None
-    dataset_path = "/Users/marynavek/Projects/Video_Project/dataset"
-    dataset_path_prnu = "/Users/marynavek/Projects/Video_Project/prnu"
+    dataset_path = "/home/marynavek/Video_Project/files/dataset"
+    dataset_path_prnu = "/home/marynavek/Video_Project/files/prnu_dataset_10"
 
     return fc_size, fc_layers, n_epochs, cnn_height, cnn_width, batch_size, use_constrained_layer, model_path, model_name, dataset_path, dataset_path_prnu
 
@@ -82,22 +82,22 @@ if __name__ == "__main__":
     train_ds_prnu = data_factory_prnu.get_tf_train_data()
     filename_ds_prnu, test_ds_prnu = data_factory_prnu.get_tf_test_data()
 
-    #1.create PRNU model 
-    prnu_model = ConstrainedNet(constrained_net=use_constrained_layer)
-    # if model_path:
-    #     prnu_model.set_model(model_path)
-    # else:
+    # #1.create PRNU model 
+    # prnu_model = ConstrainedNet(constrained_net=use_constrained_layer)
+    # # if model_path:
+    # prnu_model.set_model("/home/marynavek/Video_Project/video_identification_cnn/trained_prnu_model.h5")
+    # # else:
     #     # Create new model
-    prnu_model.create_model(num_classes_prnu, fc_layers, fc_size, cnn_height, cnn_width, model_name)
+    # prnu_model.create_model(num_classes_prnu, fc_layers, fc_size, cnn_height, cnn_width, model_name)
 
-    prnu_model.print_model_summary()
-    #2. train PRNU model
-    #3. save PRNU model as base model
-    history = prnu_model.train(train_ds=train_ds_prnu, val_ds=test_ds_prnu, epochs=n_epochs)
+    # prnu_model.print_model_summary()
+    # #2. train PRNU model
+    # #3. save PRNU model as base model
+    # history = prnu_model.train(train_ds=train_ds_prnu, val_ds=test_ds_prnu, epochs=n_epochs)
     
-    prnu_model.summarize_model(history, train_ds=train_ds_prnu, val_ds=test_ds_prnu)
+    # prnu_model.summarize_model(history, train_ds=train_ds_prnu, val_ds=test_ds_prnu)
 
-    prnu_model.save_trained_model('trained_prnu_model.h5')
+    # prnu_model.save_trained_model('trained_prnu_model2.h5')
 
     #4 loading pre-trained model
     
@@ -107,12 +107,11 @@ if __name__ == "__main__":
     #             'Constrained3DKernelMinimal': Constrained3DKernelMinimal})
     # tf.keras.models.load_model('/Users/marynavek/Projects/Video_Project/models/ccnn-FC2x1024-480_800-f3-k_s5/fm-e00001.h5')
 
-    # base_model = model(include_top=False)
 
-    frames_model = ConstrainedNet(model_name='transfer_model')
-    frames_model.create_main_model_from_transfer(pre_trained_model_path='trained_prnu_model.h5', num_outputs=num_classes_frames, fc_size=fc_size)    
+    frames_model = ConstrainedNet()
+    frames_model.create_main_model_from_transfer(pre_trained_model_path='trained_prnu_model2.h5', num_outputs=num_classes_frames, fc_size=fc_size)    
     frames_model.print_transfer_model_summary()
     history = frames_model.train_transfer_model(train_ds=train_ds_frames, val_ds=test_ds_frames, epochs=n_epochs)
-    frames_model.summarize_model(history=history, train_ds=train_ds_frames, test_ds=test_ds_frames)
+    frames_model.summarize_model(history=history, train_ds=train_ds_frames, val_ds=test_ds_frames)
 
     frames_model.save_trained_model("trasnfer_model.h5")
