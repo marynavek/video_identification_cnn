@@ -1,8 +1,9 @@
+from keras.models import Model
 import tensorflow as tf
 import numpy as np
 import os
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Input, Activation, Flatten, Conv2D, MaxPooling2D, BatchNormalization, SpatialDropout2D
+from tensorflow.keras.layers import Dense, Activation, Flatten, Conv2D, MaxPooling2D, BatchNormalization, SpatialDropout2D
 from tensorflow.keras.callbacks import TensorBoard, Callback
 from keras.constraints import Constraint
 from keras import backend as K
@@ -80,11 +81,14 @@ class ConstrainedNet:
         self.use_TensorBoard = True
         self.model = None
         self.model_path = None
-        if model_path is not None:
-            self.set_model(model_path)
+        self.transfer_model = None
+        self.loaded_model = None
+        # if model_path is not None:
+        #     self.set_model(model_path)
 
         self.verbose = False
-        self.model_name = None
+        # self.model_name = "transfer_model"
+        self.model_name
 
         # Constrained layer properties
         self.constrained_net = constrained_net
@@ -139,26 +143,16 @@ class ConstrainedNet:
 
         return model_name
 
-    def create_model(self, num_output, fc_layers, fc_size, height=480, width=800, model_name=None, transfer_model=None):
+    def create_model(self, num_output, fc_layers, fc_size, height=480, width=800, model_name=None):
 
         input_shape = (height, width, 3)
-        # data_augmentation = tf.keras.Sequential([
-        #     tf.keras.layers.RandomFlip('horizontal'),
-        #     tf.keras.layers.RandomRotation(0.2),
-        # ])
-
         model = Sequential()
-
-        if transfer_model:
-            model.add(transfer_model)
-            model.layers[0].trainable = False
-        model.add(Input(shape=input_shape))
 
         if self.constrained_net:
             cons_layer = Conv2D(filters=self.constrained_n_filters,
                                 kernel_size=self.constrained_kernel_size,
                                 strides=(1, 1),
-                                # input_shape=input_shape,
+                                input_shape=input_shape,
                                 padding="valid", # Intentionally
                                 kernel_constraint=Constrained3DKernelMinimal(),
                                 name="constrained_layer")
@@ -168,7 +162,7 @@ class ConstrainedNet:
         if self.constrained_net:
             model.add(Conv2D(filters=96, kernel_size=(7, 7), strides=(2, 2), padding="same"))
         else:
-            model.add(Conv2D(filters=96, kernel_size=(7, 7), strides=(2, 2), padding="same"))
+            model.add(Conv2D(filters=96, kernel_size=(7, 7), strides=(2, 2), padding="same", input_shape=input_shape))
 
         model.add(BatchNormalization())
         model.add(Activation(tf.keras.activations.tanh))
@@ -275,15 +269,86 @@ class ConstrainedNet:
         print(initial_epoch)
         print("total_epochs")
         print(epochs)
-        self.model.fit(train_ds,
+        history = self.model.fit(train_ds,
                        epochs=epochs,
                        initial_epoch=initial_epoch,
                        validation_data=val_ds,
                        callbacks=callbacks,
                        workers=12,
                        use_multiprocessing=True)
+        
+        return history
 
+    def train_transfer_model(self, train_ds, val_ds, epochs=1):
+        if self.transfer_model is None:
+            raise ValueError("Cannot start training! self.model is None!")
 
+        initial_epoch = self.__get_initial_epoch()
+        epochs += initial_epoch
+
+        callbacks = self.get_callbacks()
+        print("initial_epoch")
+        print(initial_epoch)
+        print("total_epochs")
+        print(epochs)
+        history = self.transfer_model.fit(train_ds,
+                       epochs=epochs,
+                       initial_epoch=initial_epoch,
+                       validation_data=val_ds,
+                       callbacks=callbacks,
+                       workers=12,
+                       use_multiprocessing=True)
+        
+        return history
+
+    def summarize_model(self, history, train_ds, val_ds):
+	# evaluate the model
+        _, train_acc = self.model.evaluate(train_ds, verbose=0)
+        _, test_acc = self.model.evaluate(val_ds, verbose=0)
+        print('Train: %.3f, Test: %.3f' % (train_acc, test_acc))
+        # plot loss during training
+        # pyplot.subplot(211)
+        # pyplot.title('Loss')
+        # pyplot.plot(history.history['loss'], label='train')
+        # pyplot.plot(history.history['val_loss'], label='test')
+        # pyplot.legend()
+        # # plot accuracy during training
+        # pyplot.subplot(212)
+        # pyplot.title('Accuracy')
+        # pyplot.plot(history.history['accuracy'], label='train')
+        # pyplot.plot(history.history['val_accuracy'], label='test')
+        # pyplot.legend()
+        # pyplot.show()
+    
+    def save_trained_model(self, model_name):
+        self.model.save(model_name)
+
+    def load_trained_model(self, model_name):
+        return tf.keras.models.load_model(model_name)
+    
+    def create_main_model_from_transfer(self, pre_trained_model_path, num_outputs, fc_size, height=480, width=800):
+        print('hello')
+        input_shape = (height, width, 3)
+
+        # model2= Model(inputs=model1.input, outputs=model1.layers[-2].output)
+        model = tf.keras.models.load_model(pre_trained_model_path, custom_objects={
+                'Constrained3DKernelMinimal': Constrained3DKernelMinimal})
+        # base_model = model(include_top=False, input_shape=input_shape)
+        base_model = Model(inputs=model.input, outputs=model.layers[-4].output)
+        flatten = Flatten()(base_model.layers[-2].output)
+        class1 = Dense(fc_size, activation=tf.keras.activations.tanh)(flatten)
+        class2 = Dense(fc_size, activation=tf.keras.activations.tanh)(class1)
+    
+        output = Dense(num_outputs, activation=tf.keras.activations.linear)(class2)
+    
+        self.transfer_model = Model(inputs=base_model.inputs, outputs=output)
+        opt = tf.keras.optimizers.SGD(learning_rate=0.001, momentum=0.95, decay=0.0005)
+
+        self.transfer_model .compile(loss=tf.keras.losses.categorical_crossentropy,
+                      optimizer=opt,
+                      metrics=["acc"])
+        # return transfer_model
+    
     def get_callbacks(self):
         default_file_name = "fm-e{epoch:05d}.h5"
         save_model_path = self.get_save_model_path(default_file_name)
@@ -325,6 +390,12 @@ class ConstrainedNet:
             print("Can't print model summary, self.model is None!")
         else:
             print(f"\nSummary of model:\n{self.model.summary()}")
+
+    def print_transfer_model_summary(self):
+        if self.transfer_model is None:
+            print("Can't print model summary, self.model is None!")
+        else:
+            print(f"\nSummary of model:\n{self.transfer_model.summary()}")
 
 
 class PrintLearningRate(Callback):
