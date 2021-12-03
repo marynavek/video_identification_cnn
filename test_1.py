@@ -107,11 +107,18 @@ if __name__ == "__main__":
     #             'Constrained3DKernelMinimal': Constrained3DKernelMinimal})
     # tf.keras.models.load_model('/Users/marynavek/Projects/Video_Project/models/ccnn-FC2x1024-480_800-f3-k_s5/fm-e00001.h5')
 
-
     frames_model = ConstrainedNet()
     frames_model.create_main_model_from_transfer(pre_trained_model_path='trained_prnu_model2.h5', num_outputs=num_classes_frames, fc_size=fc_size)    
     frames_model.print_transfer_model_summary()
-    history = frames_model.train_transfer_model(train_ds=train_ds_frames, val_ds=test_ds_frames, epochs=n_epochs)
-    frames_model.summarize_model(history=history, train_ds=train_ds_frames, val_ds=test_ds_frames)
+    i = 0
+    while i < 11:
+        transfer_model_name = "transfer_model_"+str(i)+".h5"
+        fine_tune = None
+        if i != 0 and i%2 != 0:
+            fine_tune = True
+        history = frames_model.train_transfer_model(train_ds=train_ds_frames, val_ds=test_ds_frames, epochs=n_epochs, initial_epoch=i)
+        frames_model.summarize_model(history=history, train_ds=train_ds_frames, val_ds=test_ds_frames)
 
-    frames_model.save_trained_model("trasnfer_model.h5")
+        frames_model.save_trained_model(transfer_model_name)
+        print("Finished round " + str(i))
+        i = i + 1

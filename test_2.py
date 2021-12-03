@@ -1,13 +1,14 @@
-# from constrained_net.data.data_factory import DataFactory
+ # from constrained_net.data.data_factory import DataFactory
 # from constrained_net.constrained_net import ConstrainedNet
 import argparse
-# import tensorflow_datasets as tfds
+from tensorflow.keras.layers import Flatten, Dense
+
+from tensorflow.keras.models import Model
 import tensorflow as tf
-import numpy as np
-from constrained_net import ConstrainedNet
-from contrained_net_PRNU_transfer import ConstrainedNetPRNU
+
+from constrained_net2 import Constrained3DKernelMinimal, ConstrainedNet
 from data_factory import DataFactory
-# from keras import datasets
+
 parser = argparse.ArgumentParser(
     description='Train the constrained_net',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -34,8 +35,8 @@ def run_locally():
     # model_path = "/Users/marynavek/Projects/Video_Project/models/ccnn-FC2x1024-480_800-f3-k_s5/fm-e00003.h5"
     model_path = None
     model_name = None
-    dataset_path = "/home/marynavek/Video_Project/files/iframes-dataset"
-    dataset_path_prnu = "/home/marynavek/Video_Project/files/prnu_dataset-iframes"
+    dataset_path = "/home/marynavek/Video_Project/files/dataset"
+    dataset_path_prnu = "/home/marynavek/Video_Project/files/prnu_dataset_10"
 
     return fc_size, fc_layers, n_epochs, cnn_height, cnn_width, batch_size, use_constrained_layer, model_path, model_name, dataset_path, dataset_path_prnu
 
@@ -58,6 +59,7 @@ if __name__ == "__main__":
         dataset_path = args.dataset
         dataset_path_prnu = args.dataset_path_prnu
 
+
     #frames dataset creation
     data_factory_frames = DataFactory(input_dir=dataset_path,
                                batch_size=batch_size,
@@ -65,13 +67,12 @@ if __name__ == "__main__":
                                width=cnn_width)
 
     num_classes_frames = len(data_factory_frames.get_class_names())
-    
     train_ds_frames = data_factory_frames.get_tf_train_data()
     filename_ds_frames, test_ds_frames = data_factory_frames.get_tf_test_data()
-  
+
     #PRNU dataset creation
     print("prnu dataset path")
-    
+    print(dataset_path_prnu)
     data_factory_prnu = DataFactory(input_dir=dataset_path_prnu,
                                batch_size=batch_size,
                                height=cnn_height,
@@ -81,17 +82,38 @@ if __name__ == "__main__":
     train_ds_prnu = data_factory_prnu.get_tf_train_data()
     filename_ds_prnu, test_ds_prnu = data_factory_prnu.get_tf_test_data()
 
+    # #1.create PRNU model 
+    prnu_model = ConstrainedNet(constrained_net=use_constrained_layer)
+    # # if model_path:
+    # prnu_model.set_model("/home/marynavek/Video_Project/video_identification_cnn/trained_prnu_model.h5")
+    # # else:
+    #     # Create new model
+    prnu_model.create_model(num_classes_prnu, fc_layers, fc_size, cnn_height, cnn_width, model_name)
 
-    constr_net = ConstrainedNetPRNU(constrained_net=use_constrained_layer)
-    if model_path:
-        constr_net.set_model(model_path)
-    else:
-        # Create new model
-        constr_net.create_model(num_classes_prnu, fc_layers, fc_size, cnn_height, cnn_width, model_name)
+    prnu_model.print_model_summary()
+    # #2. train PRNU model
+    # #3. save PRNU model as base model
+    p = 0 
+    base_model_name = ""
+    while p < 11:
+        base_model_name = "transfer_model_"+str(p)+".h5"
+        history = prnu_model.train(train_ds=train_ds_frames, val_ds=test_ds_frames, epochs=n_epochs, initial_epoch=p)
+    
+        prnu_model.summarize_model(history, train_ds=train_ds_frames, val_ds=test_ds_frames)
 
-    print(num_classes_prnu)
-    constr_net.print_model_summary()
-    constr_net.train(prnu_train_ds=train_ds_prnu, frames_train_ds=train_ds_frames, val_ds_test_prnu=test_ds_prnu, val_ds_test_frames=test_ds_frames, epochs=n_epochs)
+        prnu_model.save_trained_model(base_model_name)
+        print("Finished round " + str(p))
+        p = p + 1
 
+    frames_model = ConstrainedNet()
+    frames_model.create_main_model_from_transfer(pre_trained_model_path=base_model_name, num_outputs=num_classes_frames, fc_size=fc_size, freeze_layers=True)    
+    frames_model.print_transfer_model_summary()
+    i = 0
+    while i < 11:
+        transfer_model_name = "transfer_model_prnu_"+str(i)+".h5"
+        history = frames_model.train_transfer_model(train_ds=train_ds_prnu, val_ds=test_ds_prnu, epochs=n_epochs, initial_epoch=i)
+        frames_model.summarize_model(history=history, train_ds=train_ds_prnu, val_ds=test_ds_prnu)
 
-
+        frames_model.save_trained_model(transfer_model_name)
+        print("Finished round " + str(i))
+        i = i + 1

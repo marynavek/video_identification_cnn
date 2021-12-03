@@ -76,7 +76,7 @@ class Constrained3DKernelMinimalPRNU(Constraint):
 
 
 class ConstrainedNetPRNU:
-    GLOBAL_SAVE_MODEL_DIR = "/Users/marynavek/Projects/Video_Project/models_prnu/"
+    GLOBAL_SAVE_MODEL_DIR = "/home/marynavek/Video_Project/models_prnu/"
     GLOBAL_TENSORBOARD_DIR = "/Users/marynavek/Projects/Video_Project/tensorboard_prnu/"
 
     def __init__(self, model_path=None, constrained_net=True):
