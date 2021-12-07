@@ -1,14 +1,17 @@
 import tensorflow as tf
 import numpy as np
-import os
+import os, math
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Input, concatenate, Reshape, Activation, Flatten, Conv2D, MaxPooling2D, BatchNormalization
 from tensorflow.keras.callbacks import TensorBoard, Callback
 from keras.constraints import Constraint
 from keras import backend as K
 import tensorflow as tf
+from tensorflow.python import util
+from tensorflow.python.keras.layers.core import Dropout
 from tensorflow.python.ops.gen_array_ops import Reshape, reshape
 import tensorflow_datasets as tfds
+from sklearn import utils
 
 
 class Constrained3DKernelMinimalPRNU(Constraint):
@@ -232,19 +235,19 @@ class ConstrainedNetPRNU:
         dense_frames = Dense(fc_size, activation=tf.keras.activations.tanh)(flatten_frames)
 
         merge_layer = concatenate([dense_prnu, dense_frames], axis=1)
-            
+
+      
         for i in range(fc_layers*2-1):
-            # print(i)
-            # print(fc_layers)
+
             if i == 0:
                 output_layer_frames_temp = Dense(fc_size, activation=tf.keras.activations.tanh)(merge_layer)
             else: 
-                output_layer_frames_temp = Dense(fc_size, activation=tf.keras.activations.relu)(output_layer_frames_temp)
-            # if i + 1 not in range(fc_layers):
+                output_layer_frames_temp = Dense(fc_size, activation=tf.keras.activations.tanh)(output_layer_frames_temp)
                    
         final_frames_output_layer = output_layer_frames_temp    
 
-        dense_merged = Dense(num_output, activation=tf.keras.activations.linear)(final_frames_output_layer)
+        droupout_layer = Dropout(0.3)(final_frames_output_layer)
+        dense_merged = Dense(num_output, activation=tf.keras.activations.softmax)(droupout_layer)
         model = Model(inputs=(input_layer_prnu, input_layer_frames), outputs=dense_merged)
 
         # See also learning rate scheduler at the bottom of this script.
@@ -253,7 +256,7 @@ class ConstrainedNetPRNU:
         # model.compile(loss=tf.keras.losses.categorical_crossentropy,
         #               optimizer=opt,
         #               metrics=tf.keras.metrics.Accuracy())
-        model.compile(loss="binary_crossentropy",
+        model.compile(loss="categorical_crossentropy",
                       optimizer="adam",
                       metrics=['accuracy'])
 
@@ -325,8 +328,72 @@ class ConstrainedNetPRNU:
         print("initial_epoch")
         print(initial_epoch)
         print("total_epochs")
-        
-        #convert train dataset to numpy 
+
+        def frame_generator(batch_size, test_train, prnu_ds, frames_ds):
+            print("Creating %s generator with %d samples." % (test_train, len(frames_ds)))
+            count = 0
+            while True:
+
+                X = np.empty((batch_size, 480, 800, 3), dtype=np.uint8)
+                Y = np.empty((batch_size, 480, 800, 3), dtype=np.uint8)
+                l = np.empty((batch_size, 5), dtype=np.uint8)
+                inner_count = 0
+                for i in range(count*batch_size, (batch_size-1+(count*batch_size))):
+                    
+                    for d, frame_datablock in enumerate(frames_ds, start=i):
+                        frame, frame_label = frame_datablock
+
+                        X[inner_count, ...] = frame
+                        l[inner_count, ...] = frame_label
+                        for prnu_datablock in prnu_ds:
+                            prnu, prnu_label = prnu_datablock
+                            if (prnu_label==frame_label).all():
+                                Y[inner_count, ...] = prnu
+                                break
+                        inner_count = inner_count + 1
+                        break        
+                    
+
+                count = count + 1
+
+                yield [Y, X], l
+
+
+        def frame_generator_shuffled(batch_size, test_train, prnu_ds, frames_ds):
+            print("Creating %s generator with %d samples." % (test_train, len(frames_ds)))
+            count = 0
+            while True:
+
+                X = np.empty((batch_size, 480, 800, 3), dtype=np.uint8)
+                Y = np.empty((batch_size, 480, 800, 3), dtype=np.uint8)
+                l = np.empty((batch_size, 5), dtype=np.uint8)
+                inner_count = 0
+                for i in range(count*batch_size, (batch_size-1+(count*batch_size))):
+                    
+                    for d, frame_datablock in enumerate(frames_ds, start=i):
+                        frame, frame_label = frame_datablock
+
+                        X[inner_count, ...] = frame
+                        l[inner_count, ...] = frame_label
+                        inner_count = inner_count + 1
+                        break        
+                    
+
+                    X, l = utils.shuffle(X, l)
+
+                    for l_count, f_label in enumerate(l):
+                          for prnu_datablock in prnu_ds:
+                            prnu, prnu_label = prnu_datablock
+                            if (prnu_label==f_label).all():
+                                Y[l_count, ...] = prnu
+                                break
+
+                count = count + 1
+
+                yield [Y, X], l
+
+
+          #convert train dataset to numpy 
         prnu_train = tfds.as_numpy(prnu_train_ds)
         frames_train = tfds.as_numpy(frames_train_ds)
 
@@ -334,104 +401,35 @@ class ConstrainedNetPRNU:
         val_prnu_train = tfds.as_numpy(val_ds_test_prnu)
         val_frames_train = tfds.as_numpy(val_ds_test_frames)
 
+        train_datasest_length = len(frames_train)
+        val_datasest_length = len(val_frames_train)
+        train_number_of_iter = math.floor(train_datasest_length/32)
+        val_number_of_iter = math.floor(val_datasest_length/32)
+        generator = frame_generator(32, 'train', prnu_train, frames_train)
+        val_generator = frame_generator(32, 'test', val_prnu_train, val_frames_train)
 
-        train_array_lenght = len(frames_train)
-        val_array_lenght = len(val_frames_train)
-        train_array_lenght = 4352
-        val_array_lenght = len(val_frames_train)
-        print(train_array_lenght)
-        print(val_array_lenght)
 
-        train_images_frames = np.empty((train_array_lenght, 480, 800, 3), dtype=np.uint8)
-        train_images_prnu = np.empty((train_array_lenght, 480, 800, 3), dtype=np.uint8)
-        train_labels = np.empty((train_array_lenght, 5), dtype=np.uint8)
-        # val_images_frames = np.empty((val_array_lenght, 480, 800, 3), dtype=np.uint8)
-        # val_images_prnu = np.empty((val_array_lenght, 480, 800, 3), dtype=np.uint8)
-        # val_labels = np.empty((val_array_lenght, 5), dtype=np.uint8)
-        # for i, fpath in enumerate(fpaths):
-        #     img = cv2.imread(fpath, cv2.CV_LOAD_IMAGE_COLOR)
-        #     data[i, ...] = img.transpose(2, 0, 1)
-
-        # count1 = 0
-
-        prev_shape1 = 0
-        print("Creating the data for train dataset")
-        for i, frame_datablock in enumerate(frames_train):
-            frame, frame_label = frame_datablock
-            # current_shape1 = np.shape(frame)
-            # if count2 == 0:
-            # if count1 < 33:
-            # print(np.shape(frame))
-            # print(np.shape(frame_label))
-            # print(frame_label)
-
-            # if prev_shape1 == 0 or prev_shape1 == current_shape1:
-            if i == 4352:
-                break
-            train_images_frames[i, ...] = frame
-            train_labels[i, ...] = frame_label
-            for prnu_datablock in prnu_train:
-                prnu, prnu_label = prnu_datablock
-                if (prnu_label==frame_label).all():
-                    train_images_prnu[i, ...] = prnu
-                    break
-
-        #             # prev_shape1 = current_shape1
-        #             # count1 = count1 + 1
-
-        print("Finished train creation")
-        # count2 = 0
-        # prev_shape2 = 0
-        print("Creating the data for validation dataset")
-        # for i, val_frame_datablock in enumerate(val_frames_train):
-
-        #     frame, frame_label = val_frame_datablock
-            
-        #     # if count2 == 0:
-        #     # if count2 < 33:
-        #     # print(np.shape(frame))
-        #     # print(np.shape(val_images_frames))
-        #     # print(frame_label)
-        #     # if prev_shape2 == 0 or prev_shape2 == current_shape2:
-        #     val_images_frames[i, ...] = frame
-        #     val_labels[i, ...] = frame_label
-        #     for prnu_datablock in val_prnu_train:
-        #         prnu, prnu_label = prnu_datablock
-        #         print(prnu_label)
-        #         if (prnu_label==frame_label).all():
-        #             val_images_prnu[i, ...] = prnu
-        #             break
-
-        #             # prev_shape2 = current_shape2
-        #             # count2 = count2 + 1
-        #     # else: break
-        print("Finished val creation")
-        print(np.shape(train_images_prnu))
-        print(np.shape(train_images_frames))
-        print(np.shape(train_labels))
-
-        # print(np.shape(val_images_prnu))
-        # print(np.shape(val_images_frames))
-        # print(np.shape(val_labels))
-
-        self.model.fit(x = [train_images_prnu, train_images_frames],y = train_labels,
-                        batch_size=32,
-                        epochs=epochs,
-                        initial_epoch=initial_epoch,
-                        validation_split=0.15,
+        history = self.model.fit(generator,
+                        # batch_size=32,
+                        steps_per_epoch=train_number_of_iter,
+                        epochs=10,
+                        verbose=1,
+                        initial_epoch=0,
+                        # validation_split=0.15,
+                        validation_steps=val_number_of_iter,
+                        validation_data=val_generator,
                         # validation_data=([val_images_prnu,val_images_frames], val_labels),
                         callbacks=callbacks)
                         # workers=12,
                         # use_multiprocessing=True)  # we pass one data array per model input
 
-        # self.model.fit(x = [train_images_prnu_stack, train_images_frames_stack],y = train_labels_stack,
-        #                 batch_size=32,
-        #                 epochs=5,
-        #                 initial_epoch=initial_epoch,
-        #                 validation_data=([val_images_prnu_stack,val_images_frames_stack], val_labels_stack),
-        #                 callbacks=callbacks,
-        #                 workers=12,
-        #                 use_multiprocessing=True)  # we pass one data array per model input
+        print("\nfinished training \n")
+        self.model.save("concatenate_model_1.h5")
+        print("\nmodel is saved\n")
+        scores = self.model.evaluate(val_generator, steps=train_number_of_iter)
+        print("%s%s: %.2f%%" % ("evaluate ",self.model.metrics_names[1], scores[1]*100))
+        print(scores)
+        return history
 
 
     def get_callbacks(self):

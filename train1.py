@@ -88,10 +88,8 @@ if __name__ == "__main__":
     else:
         # Create new model
         constr_net.create_model(num_classes_prnu, fc_layers, fc_size, cnn_height, cnn_width, model_name)
-
+    
     print(num_classes_prnu)
     constr_net.print_model_summary()
-    constr_net.train(prnu_train_ds=train_ds_prnu, frames_train_ds=train_ds_frames, val_ds_test_prnu=test_ds_prnu, val_ds_test_frames=test_ds_frames, epochs=n_epochs)
-
-
+    history = constr_net.train(prnu_train_ds=train_ds_prnu, frames_train_ds=train_ds_frames, val_ds_test_prnu=test_ds_prnu, val_ds_test_frames=test_ds_frames, epochs=n_epochs)
 
