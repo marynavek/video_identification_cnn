@@ -83,8 +83,10 @@ class DataFactory:
         """
         file_parts = tf.strings.split(file_path, os.path.sep)
         class_name = file_parts[-2]
+        print(class_name)
         one_hot_vec = tf.cast(class_name == self.class_names, dtype=tf.dtypes.float32, name="labels")
-
+        print("one_hot_vec")
+        print(one_hot_vec)
         return one_hot_vec
 
     def get_file_name(self, file_path):
@@ -121,6 +123,9 @@ class DataFactory:
         for element in file_path_ds.take(10):
             print(element)
 
+        print(f"\nPrinting first 10 elements of dataset:\n")
+        for element in file_path_ds.take(10):
+            print(element)
         # Load actual images and create labels accordingly
         labeled_ds = file_path_ds.map(self.process_path, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         print(f"\nFinished creating labeled dataset ({int(time.time() - t_start)} sec.)\n")

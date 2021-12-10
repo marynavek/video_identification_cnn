@@ -7,6 +7,7 @@ import numpy as np
 from constrained_net import ConstrainedNet
 from contrained_net_PRNU_transfer import ConstrainedNetPRNU
 from data_factory import DataFactory
+from preparing_csv_dataset import DataSetGenerator
 # from keras import datasets
 parser = argparse.ArgumentParser(
     description='Train the constrained_net',
@@ -59,27 +60,13 @@ if __name__ == "__main__":
         dataset_path_prnu = args.dataset_path_prnu
 
     #frames dataset creation
-    data_factory_frames = DataFactory(input_dir=dataset_path,
-                               batch_size=batch_size,
-                               height=cnn_height,
-                               width=cnn_width)
+    data_factory = DataSetGenerator(input_dir_frames=dataset_path,
+                            input_dir_prnu = dataset_path_prnu)
 
-    num_classes_frames = len(data_factory_frames.get_class_names())
+    num_classes = len(data_factory.get_class_names())
     
-    train_ds_frames = data_factory_frames.get_tf_train_data()
-    filename_ds_frames, test_ds_frames = data_factory_frames.get_tf_test_data()
-  
-    #PRNU dataset creation
-    print("prnu dataset path")
-    
-    data_factory_prnu = DataFactory(input_dir=dataset_path_prnu,
-                               batch_size=batch_size,
-                               height=cnn_height,
-                               width=cnn_width)
-
-    num_classes_prnu = len(data_factory_prnu.get_class_names())
-    train_ds_prnu = data_factory_prnu.get_tf_train_data()
-    filename_ds_prnu, test_ds_prnu = data_factory_prnu.get_tf_test_data()
+    train_dataset_dict = data_factory.create_train_dataset()
+    valid_dataset_dict = data_factory.create_validation_dataset()
 
 
     constr_net = ConstrainedNetPRNU(constrained_net=use_constrained_layer)
@@ -87,9 +74,9 @@ if __name__ == "__main__":
         constr_net.set_model(model_path)
     else:
         # Create new model
-        constr_net.create_model(num_classes_prnu, fc_layers, fc_size, cnn_height, cnn_width, model_name)
+        constr_net.create_model(num_classes, fc_layers, fc_size, cnn_height, cnn_width, model_name)
     
-    print(num_classes_prnu)
+    print(num_classes)
     constr_net.print_model_summary()
-    history = constr_net.train(prnu_train_ds=train_ds_prnu, frames_train_ds=train_ds_frames, val_ds_test_prnu=test_ds_prnu, val_ds_test_frames=test_ds_frames, epochs=n_epochs)
+    history = constr_net.train(train_ds=train_dataset_dict, val_ds_test=valid_dataset_dict, epochs=n_epochs)
 
