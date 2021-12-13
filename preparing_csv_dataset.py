@@ -107,3 +107,32 @@ class DataSetGenerator:
             for device in classes:
                 if device in prnu_frame_path and device in file_path:
                     return prnu_frame_path
+
+    def create_test_dataset(self):
+
+        validation_input_frames_file_names = np.array(glob(str(self.test_dir_frames) + "/**/*.jpg", recursive = True))
+        labeled_dictionary = list()
+
+        random.shuffle(validation_input_frames_file_names)
+
+        for i, file_path in enumerate(validation_input_frames_file_names):
+            prnu_path = self.get_prnu_file_test(file_path)
+            class_label = self.determine_label(file_path)
+            ds_row = {"item_ID": i, "frame_path": file_path, "class_label": class_label, "prnu_path": prnu_path}
+            labeled_dictionary.append(ds_row)
+
+        with open("test_dataset_images.csv", "w") as file:
+            keys = ["item_ID", "frame_path", "class_label", "prnu_path"]
+            csvwriter = csv.DictWriter(file, keys)
+            csvwriter.writeheader()
+            csvwriter.writerows(labeled_dictionary)
+        return labeled_dictionary
+
+    def get_prnu_file_test(self, file_path):
+        validation_input_prnu_file_names = np.array(glob(str(self.test_dir_prnu) + "/**/*.jpg", recursive = True))
+        classes = self.get_class_names()
+        
+        for prnu_frame_path in validation_input_prnu_file_names:
+            for device in classes:
+                if device in prnu_frame_path and device in file_path:
+                    return prnu_frame_path

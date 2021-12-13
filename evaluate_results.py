@@ -4,6 +4,7 @@ import argparse
 
 from data_factory import DataFactory
 from frame_prediction_stats import FramePredictionStatistics
+from new_frames_predic_stats_video_types import FramesPredictionsVideoTypesStats
 from new_predict_frames import PredictFrames
 from predict_frames import FramePredictor
 from frame_prediction_vizualization import FramePredictionVis
@@ -43,6 +44,9 @@ def get_models_files(input_dir, models):
     # Get all files (i.e. models) from input directory
     files_list = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
     files_list = sorted(files_list)
+    # for item in files_list:
+    #     if "fm-e00001" in item or "fm-e00002" in item:
+    #         files_list.remove(item)
     print(f"Found {len(files_list)} files in {input_dir}: {files_list}")
 
     if models:
@@ -96,7 +100,7 @@ if __name__ == "__main__":
 
     for model_file in model_files:
         print(f"{model_file} | Start prediction process")
-
+        # model_file = "fm-e00003.h5"
         # Re-create dataset for each model to make sure the test-generator does not mess up.
         # dataset = DataFactory(input_dir=dataset_path, batch_size=batch_size, height=height, width=width)
         # filename_ds, test_ds = dataset.get_tf_test_data()
@@ -104,7 +108,7 @@ if __name__ == "__main__":
         dataset_factory = DataSetGenerator(input_dir_frames=frames_ds_path,
                             input_dir_prnu = prnu_ds_path)
 
-        valid_dataset_dict = dataset_factory.create_validation_dataset()
+        valid_dataset_dict = dataset_factory.create_test_dataset()
         # List containing only the file names of items in test set
         # test_ds_filenames = list(filename_ds.as_numpy_iterator())
 
@@ -113,8 +117,8 @@ if __name__ == "__main__":
 
         print(f"{model_file} | Start predicting frames")
         # Predict Frames
-        frame_predictor = PredictFrames(model_dir=model_input_dir, model_fname=model_file, result_dir=frames_res_dir,
-                                         constrained=constrained)
+        frame_predictor = PredictFrames(model_dir=model_input_dir,results_dir=frames_res_dir, model_fname=model_file,
+                                         constrained=True)
         
         files_with_predictions = frame_predictor.start_predictions(test_dictionary=valid_dataset_dict)
         print(f"{model_file} | Predicting frames completed")
@@ -126,9 +130,9 @@ if __name__ == "__main__":
         # video_pred_file = video_predictor.start(frame_pred_file)
         # print(f"{model_file} | Predicting videos completed")
 
-    print(f"Creating Statistics and Visualizations ...")
-    # Create Frame Prediction Statistics
-    fps =  FramePredictionStatistics(result_dir=frames_res_dir)
+    # print(f"Creating Statistics and Visualizations ...")
+    # # Create Frame Prediction Statistics
+    fps =  FramesPredictionsVideoTypesStats(result_dir=frames_res_dir)
     frame_stats = fps.start()
     print(f"Frame Prediction Statistics Completed")
 

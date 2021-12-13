@@ -30,7 +30,10 @@ class DataGenerator(Sequence):
         # Generate data
         frames_batch, prnu_batch, labels_batch = self.__generate_frames_ds__(list_IDs_temp)
 
-        return [prnu_batch, frames_batch], labels_batch
+        if self.to_fit == True:
+            return [prnu_batch, frames_batch], labels_batch
+        else: 
+            return [prnu_batch, frames_batch]
 
 
     def on_epoch_end(self):
@@ -55,7 +58,7 @@ class DataGenerator(Sequence):
             prnu_ds[i, ...] = prnu
             labels_ds[i, ...] = label
             
-            if i == 0:
+            if i == 0 and self.shuffle == False:
                 print("\n1st in batch\n")
                 print(item)
 
