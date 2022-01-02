@@ -5,7 +5,7 @@ import argparse
 from data_factory import DataFactory
 from frame_prediction_stats import FramePredictionStatistics
 from new_predict_frames import PredictFrames
-from predict_frames import FramePredictor
+# from predict_frames import FramePredictor
 from frame_prediction_vizualization import FramePredictionVis
 from preparing_csv_dataset import DataSetGenerator
 
@@ -104,19 +104,19 @@ if __name__ == "__main__":
         dataset_factory = DataSetGenerator(input_dir_frames=frames_ds_path,
                             input_dir_prnu = prnu_ds_path)
 
-        valid_dataset_dict = dataset_factory.create_validation_dataset()
-        # List containing only the file names of items in test set
-        # test_ds_filenames = list(filename_ds.as_numpy_iterator())
+        valid_dataset_dict = dataset_factory.create_test_dataset()
 
 
         ###test_ds_filenames will be extracted from csv
 
         print(f"{model_file} | Start predicting frames")
         # Predict Frames
-        frame_predictor = PredictFrames(model_dir=model_input_dir, model_fname=model_file, result_dir=frames_res_dir,
+        frame_predictor = PredictFrames(model_dir=model_input_dir, model_fname=model_file, results_dir=frames_res_dir,
                                          constrained=constrained)
         
         files_with_predictions = frame_predictor.start_predictions(test_dictionary=valid_dataset_dict)
+        # frame_predictor.another_predict(test_dictionary=valid_dataset_dict)
+
         print(f"{model_file} | Predicting frames completed")
 
         # print(f"{model_file} | Start predicting videos")

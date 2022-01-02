@@ -4,8 +4,8 @@ from posix import listdir
 from posixpath import join
 
 
-INPUT_DIR = "/home/marynavek/Video_Project/files/Videos"
-OUTPUT_DIR = "/home/marynavek/Video_Project/files/IFrames"
+INPUT_DIR = "/Users/marynavek/Projects/files/Videos"
+OUTPUT_DIR = "/Users/marynavek/Projects/files/IFrames"
 DEVICES = [item for item in os.listdir(INPUT_DIR) if os.path.isdir(os.path.join(INPUT_DIR, item))]
 
 print(DEVICES)

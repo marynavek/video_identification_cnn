@@ -82,8 +82,8 @@ class Constrained3DKernelMinimalPRNU(Constraint):
 
 
 class ConstrainedNetPRNU:
-    GLOBAL_SAVE_MODEL_DIR = "/home/marynavek/Video_Project/video_identification_cnn/models_concat_transfer_prnu/"
-    GLOBAL_TENSORBOARD_DIR = "/home/marynavek/Video_Project/video_identification_cnn/tensorboard_concat_transfer_prnu/"
+    GLOBAL_SAVE_MODEL_DIR = "/Users/marynavek/Projects/video_identification_cnn/models_concat_transfer_noise_patches/"
+    GLOBAL_TENSORBOARD_DIR = "/Users/marynavek/Projects/video_identification_cnn/tensorboard_concat_transfer_noise_patches/"
 
     def __init__(self, model_path=None, constrained_net=True):
         self.use_TensorBoard = True
@@ -152,8 +152,9 @@ class ConstrainedNetPRNU:
 
         input_shape = (height, width, 3)
 
-        input_layer_prnu = Input(shape=input_shape)
-        input_layer_frames = Input(shape=input_shape)
+        input_patches = (128, 128, 3)
+        input_layer_prnu = Input(shape=input_patches)
+        input_layer_frames = Input(shape=input_patches)
         # input_layer_frames = Input(dtype=input_shape)
         
         if self.constrained_net:
@@ -186,24 +187,23 @@ class ConstrainedNetPRNU:
         max_pool1_prnu = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(activation1_prnu)
 
 
-        con2d_2_prnu = Conv2D(filters=64, kernel_size=(5, 5), strides=(1, 1), padding="same", kernel_regularizer=L2(0.01))(max_pool1_prnu)
+        con2d_2_prnu = Conv2D(filters=64, kernel_size=(5, 5), strides=(1, 1), padding="same")(max_pool1_prnu)
         batch2_prnu = BatchNormalization()(con2d_2_prnu)
         activation2_prnu = Activation(tf.keras.activations.tanh)(batch2_prnu)
         max_pool2_prnu = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(activation2_prnu)
                         
-        # con2d_3_prnu = Conv2D(filters=64, kernel_size=(5, 5), strides=(1, 1), padding="same")(max_pool2_prnu)
-        # batch3_prnu = BatchNormalization()(con2d_3_prnu)
-        # activation3_prnu = Activation(tf.keras.activations.tanh)(batch3_prnu)
-        # max_pool3_prnu = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(activation3_prnu)
+        con2d_3_prnu = Conv2D(filters=64, kernel_size=(5, 5), strides=(1, 1), padding="same")(max_pool2_prnu)
+        batch3_prnu = BatchNormalization()(con2d_3_prnu)
+        activation3_prnu = Activation(tf.keras.activations.tanh)(batch3_prnu)
+        max_pool3_prnu = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(activation3_prnu)
 
 
-        # con2d_4_prnu = Conv2D(filters=128, kernel_size=(1, 1), strides=(1, 1), padding="same", kernel_regularizer=L2(0.01))(max_pool3_prnu)
-        # batch4_prnu = BatchNormalization()(con2d_4_prnu)
-        # activation4_prnu = Activation(tf.keras.activations.tanh)(batch4_prnu)
-        # max_pool4_prnu = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(activation4_prnu)
+        con2d_4_prnu = Conv2D(filters=128, kernel_size=(1, 1), strides=(1, 1), padding="same", kernel_regularizer=L2(0.01))(max_pool3_prnu)
+        batch4_prnu = BatchNormalization()(con2d_4_prnu)
+        activation4_prnu = Activation(tf.keras.activations.tanh)(batch4_prnu)
+        max_pool4_prnu = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(activation4_prnu)
 
-        # model_prnu.add(Flatten())
-        flatten_prnu = Flatten()(max_pool2_prnu)
+        flatten_prnu = Flatten()(max_pool4_prnu)
         dense_prnu = Dense(fc_size, activation=tf.keras.activations.tanh)(flatten_prnu)
 
 
@@ -243,14 +243,12 @@ class ConstrainedNetPRNU:
         for i in range(fc_layers*2-1):
 
             if i == 0:
-                # droupout_layer = Dropout(0.3)(merge_layer)
                 output_layer_frames_temp = Dense(fc_size, activation=tf.keras.activations.tanh)(merge_layer)
             else: 
                 output_layer_frames_temp = Dense(fc_size, activation=tf.keras.activations.tanh)(output_layer_frames_temp)
                    
         final_frames_output_layer = output_layer_frames_temp    
 
-        # droupout_layer = Dropout(0.35)(final_frames_output_layer)
         dense_merged = Dense(5, activation=tf.keras.activations.softmax)(final_frames_output_layer)
         model = Model(inputs=(input_layer_prnu, input_layer_frames), outputs=dense_merged)
 
@@ -325,62 +323,15 @@ class ConstrainedNetPRNU:
         if self.model is None:
             raise ValueError("Cannot start training! self.model is None!")
 
-        # initial_epoch = self.__get_initial_epoch()
-        # epochs += initial_epoch
-
         callbacks = self.get_callbacks()
-        # print("initial_epoch")
-        # print(initial_epoch)
-        # print("total_epochs")
 
-
-        #   #convert train dataset to numpy 
-        # for i in range(4):
-        #     dataset = prnu_train_ds.shuffle(3, reshuffle_each_iteration=True)
-
-        #     print()
-        # prnu_train = tfds.as_numpy(prnu_train_ds)
-        # frames_train = tfds.as_numpy(frames_train_ds)
-
-        # #convert validation dataset to numpy 
-        # val_prnu_train = tfds.as_numpy(val_ds_test_prnu)
-        # val_frames_train = tfds.as_numpy(val_ds_test_frames)
-
-
-        train_datasest_length = len(train_ds)
-        val_datasest_length = len(val_ds_test)
-        train_number_of_iter = math.floor(train_datasest_length/32)
-        val_number_of_iter = math.floor(val_datasest_length/32)
-
-
-        training_generator = DataGenerator(train_ds)
-        validation_generator = DataGenerator(val_ds_test, shuffle=False)
-
-        # generator = frame_generator_shuffled(32, 'train', prnu_train, frames_train)
-        # val_generator = frame_generator_shuffled(32, 'test', val_prnu_train, val_frames_train)
-
-            
-        history = self.model.fit(training_generator,
-                            # batch_size=32,
-                            # steps_per_epoch=train_number_of_iter,
+        self.model.fit(DataGenerator(train_ds),
                             epochs=10,
                             verbose=1,
                             initial_epoch=0,
-                            # validation_split=0.15,
-                            # validation_steps=val_number_of_iter,
-                            validation_data=validation_generator,
-                            # validation_data=([val_images_prnu,val_images_frames], val_labels),
+                            validation_data=DataGenerator(val_ds_test, shuffle=False),
                             callbacks=callbacks)
-                        # workers=12,
-                        # use_multiprocessing=True)  # we pass one data array per model input
 
-        print("\nfinished training \n")
-        self.model.save("concatenate_model_1.h5")
-        print("\nmodel is saved\n")
-        scores = self.model.evaluate(validation_generator)
-        print("%s%s: %.2f%%" % ("evaluate ",self.model.metrics_names[1], scores[1]*100))
-        print(scores)
-        return history
 
 
     def get_callbacks(self):

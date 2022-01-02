@@ -6,7 +6,6 @@ import tensorflow as tf
 import numpy as np
 from constrained_net import ConstrainedNet
 from contrained_net_PRNU_transfer import ConstrainedNetPRNU
-from data_factory import DataFactory
 from preparing_csv_dataset import DataSetGenerator
 # from keras import datasets
 parser = argparse.ArgumentParser(
@@ -35,16 +34,17 @@ def run_locally():
     # model_path = "/Users/marynavek/Projects/Video_Project/models/ccnn-FC2x1024-480_800-f3-k_s5/fm-e00003.h5"
     model_path = None
     model_name = None
-    dataset_path = "/home/marynavek/Video_Project/files/iframes-dataset"
-    dataset_path_prnu = "/home/marynavek/Video_Project/files/prnu_dataset-iframes"
+    dataset_path = "/Users/marynavek/Projects/files/patches"
+    dataset_path_prnu = "/Users/marynavek/Projects/files/prnu_dataset"
+    dataset_path_noiseprints = "/Users/marynavek/Projects/files/noise-patches-dataset"
 
-    return fc_size, fc_layers, n_epochs, cnn_height, cnn_width, batch_size, use_constrained_layer, model_path, model_name, dataset_path, dataset_path_prnu
+    return fc_size, fc_layers, n_epochs, cnn_height, cnn_width, batch_size, use_constrained_layer, model_path, model_name, dataset_path, dataset_path_prnu, dataset_path_noiseprints
 
 if __name__ == "__main__":
     DEBUG = True
 
     if DEBUG:
-        fc_size, fc_layers, n_epochs, cnn_height, cnn_width, batch_size, use_constrained_layer, model_path, model_name, dataset_path, dataset_path_prnu = run_locally()
+        fc_size, fc_layers, n_epochs, cnn_height, cnn_width, batch_size, use_constrained_layer, model_path, model_name, dataset_path, dataset_path_prnu, dataset_path_noiseprints = run_locally()
     else:
         args = parser.parse_args()
         fc_size = args.fc_size
@@ -56,12 +56,13 @@ if __name__ == "__main__":
         use_constrained_layer = args.constrained == 1
         model_path = args.model_path
         model_name = args.model_name
-        dataset_path = args.dataset
+        dataset_path = args.dataset_path
         dataset_path_prnu = args.dataset_path_prnu
+        dataset_path_noiseprints = args.dataset_path_noiseprints
 
     #frames dataset creation
     data_factory = DataSetGenerator(input_dir_frames=dataset_path,
-                            input_dir_prnu = dataset_path_prnu)
+                            input_dir_noiseprint=dataset_path_noiseprints, input_dir_prnu=dataset_path_prnu)
 
     num_classes = len(data_factory.get_class_names())
     
