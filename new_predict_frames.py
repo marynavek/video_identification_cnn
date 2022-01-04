@@ -79,25 +79,4 @@ class PredictFrames():
         
         return device_labels_list
 
-    def another_predict(self, test_dictionary):
-        predict_ds_generator = DataGenerator(test_dictionary, shuffle=False, to_fit=False)
-
-        test_predictions = self.model.predict(predict_ds_generator)
-        #load test_labels
-        with open("true_labels_for_prediction.csv", 'r') as labels_csv:
-            test_labels = labels_csv
-
-        fig, ax = plt.subplots(figsize=(8,4))
-        plt.scatter(test_labels, test_predictions, alpha=0.6, 
-                    color='#FF0000', lw=1, ec='black')
-        lims = [0, 5]
-
-        plt.plot(lims, lims, lw=1, color='#0000FF')
-        plt.ticklabel_format(useOffset=False, style='plain')
-        plt.xticks(fontsize=18)
-        plt.yticks(fontsize=18)
-        plt.xlim(lims)
-        plt.ylim(lims)
-
-        plt.tight_layout()
-        plt.show()
+    

@@ -2,6 +2,19 @@ import csv, os
 import statistics
 from statistics import mode
 
+def find_max_mode(list1):
+    list_table = statistics._counts(list1)
+    len_table = len(list_table)
+
+    if len_table == 1:
+        max_mode = statistics.mode(list1)
+    else:
+        new_list = []
+        for i in range(len_table):
+            new_list.append(list_table[i][0])
+        max_mode = max(new_list)
+    return max_mode
+
 path_to_csv = '/Users/marynavek/Projects/Video_Project/'
 path = os.path.join(path_to_csv, "output_frames_stats.csv")
 with open(path, newline='') as csvfile:

@@ -102,7 +102,7 @@ if __name__ == "__main__":
         # filename_ds, test_ds = dataset.get_tf_test_data()
 
         dataset_factory = DataSetGenerator(input_dir_frames=frames_ds_path,
-                            input_dir_prnu = prnu_ds_path)
+                            input_dir_noiseprint = prnu_ds_path, input_dir_prnu=prnu_ds_path)
 
         valid_dataset_dict = dataset_factory.create_test_dataset()
 

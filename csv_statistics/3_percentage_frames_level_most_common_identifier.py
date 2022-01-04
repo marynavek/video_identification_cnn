@@ -11,7 +11,7 @@ VIDEO_TYPES = [
     "_indoorYT_",
     "_outdoor_",
     "_outdoorWA_",
-    "_outdoorYT"
+    "_outdoorYT_"
 ]
 with open(path, newline='') as csvfile:
     reader = csv.DictReader(csvfile)

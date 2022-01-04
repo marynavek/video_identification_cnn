@@ -1,7 +1,7 @@
 import csv, os
 
-path_to_csv = '/Users/marynavek/Projects/Video_Project/models_prnu/ccnn-FC2x1024-480_800-f3-k_s5/predictions/frames'
-path = os.path.join(path_to_csv, "fm-e00004_F_predictions.csv")
+path_to_csv = '/Users/marynavek/Projects/video_identification_cnn/models_concat_transfer_prnu/ccnn-FC2x1024-480_800-f3-k_s5/predictions/frames'
+path = os.path.join(path_to_csv, "fm-e00001_F_predictions.csv")
 with open(path, newline='') as csvfile:
     reader = csv.DictReader(csvfile)
 
@@ -16,7 +16,10 @@ with open(path, newline='') as csvfile:
     
     newreader = []
     for row in reader:
-        remove_part, video_name = row["File"].split("D0")
+        file_name_row = row["File"]
+        file_name_row = file_name_row.replace("['", "")
+        file_name_row = file_name_row.replace("']", "")
+        remove_part, video_name = file_name_row.split("D0")
         video_name = video_name.split(".")[0]
         row["Video Name"] = video_name
         newreader.append(row)

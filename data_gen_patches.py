@@ -3,9 +3,8 @@ import cv2, os
 from tensorflow.keras.utils import Sequence
 import tensorflow as tf
 from csv import writer
-import subprocess
 
-class DataGenerator(Sequence):
+class DataGeneratorPatches(Sequence):
     def __init__(self,frames_path_dict, to_fit=True, batch_size=32, dim=(480,800,3), shuffle=True):
         self.frames_path_dict = frames_path_dict
         self.to_fit = to_fit
@@ -55,15 +54,15 @@ class DataGenerator(Sequence):
             np.random.shuffle(self.indexes)
 
     def __generate_frames_ds__(self, list_IDs_temp):
-        frame_ds = np.empty((self.batch_size, 480, 800, 3), dtype=np.uint8)
-        prnu_ds = np.empty((self.batch_size, 480, 800, 3), dtype=np.uint8)
+        frame_ds = np.empty((self.batch_size, 128, 128, 3), dtype=np.uint8)
+        prnu_ds = np.empty((self.batch_size, 128, 128, 3), dtype=np.uint8)
         labels_ds = np.empty((self.batch_size, 5), dtype=np.uint8)
         for i, id in enumerate(list_IDs_temp):
             key = "item_ID"
             val = id
             item = next((d for d in self.frames_path_dict if d.get(key) == val), None)
             
-            frame = self.__get_image__(item["frame_path"])
+            frame = self.__get_image__(item["frame_path"], resize=False)
             prnu = self.__get_image__(item["noise_path"])
             label = item["class_label"]
             frame_ds[i, ...] = frame
@@ -72,11 +71,7 @@ class DataGenerator(Sequence):
             
         return frame_ds, prnu_ds, labels_ds
 
-
-    #read image and resize it to (480,800, 3() and dt.float32 type)
     def __get_image__(self, image_path):
         img = cv2.imread(image_path)    
-        img = cv2.resize(img, (800,480))
         return img
-
 
