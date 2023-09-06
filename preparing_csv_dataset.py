@@ -6,16 +6,12 @@ from glob import glob
 
 
 class DataSetGenerator:
-    def __init__(self, input_dir_frames=None, input_dir_noiseprint=None, input_dir_prnu=None, test_dir_suffix=""): 
+    def __init__(self, input_dir_frames=None, input_dir_noiseprint=None,  test_dir_suffix=""): 
         self.data_dir_frames = pathlib.Path(input_dir_frames)
-        self.data_dir_prnu = pathlib.Path(input_dir_prnu)
         self.data_dir_noiseprints = pathlib.Path(input_dir_noiseprint)
-
 
         self.train_dir_frames = pathlib.Path(os.path.join(self.data_dir_frames, "train"))
         self.test_dir_frames = pathlib.Path(os.path.join(self.data_dir_frames, f"test{test_dir_suffix}"))
-        self.train_dir_prnu = pathlib.Path(os.path.join(self.data_dir_prnu, "train"))
-        self.test_dir_prnu = pathlib.Path(os.path.join(self.data_dir_prnu, f"test{test_dir_suffix}"))
         self.train_dir_noiseprints = pathlib.Path(os.path.join(self.data_dir_noiseprints, "train"))
         self.test_dir_noiseprints= pathlib.Path(os.path.join(self.data_dir_noiseprints, f"test{test_dir_suffix}"))
         
@@ -56,9 +52,7 @@ class DataSetGenerator:
 
         train_input_frames_file_names = np.array(glob(str(self.train_dir_frames) + "/**/*.jpg", recursive = True))
         labeled_dictionary = list()
-
         random.shuffle(train_input_frames_file_names)
-
         for i, file_path in enumerate(train_input_frames_file_names):
             # if i <10:
             noise_path = self.get_noiseprint_file_name_train(file_path)
@@ -74,14 +68,6 @@ class DataSetGenerator:
             csvwriter.writeheader()
             csvwriter.writerows(labeled_dictionary)
         return labeled_dictionary
-
-    def get_prnu_file_train(self, file_path):
-        train_input_prnu_file_names = np.array(glob(str(self.train_dir_prnu) + "/**/*.jpg", recursive = True))
-        classes = self.get_class_names()
-        for prnu_frame_path in train_input_prnu_file_names:
-            for device in classes:
-                if device in prnu_frame_path and device in file_path:
-                    return prnu_frame_path
 
     def get_noiseprint_file_name_train(self, file_path):
         file_path, file_name = os.path.split(file_path)
@@ -113,15 +99,6 @@ class DataSetGenerator:
             csvwriter.writerows(labeled_dictionary)
         return labeled_dictionary
 
-    def get_prnu_file_validation(self, file_path):
-        validation_input_prnu_file_names = np.array(glob(str(self.test_dir_prnu) + "/**/*.jpg", recursive = True))
-        classes = self.get_class_names()
-        
-        for prnu_frame_path in validation_input_prnu_file_names:
-            for device in classes:
-                if device in prnu_frame_path and device in file_path:
-                    return prnu_frame_path
-
     def get_noiseprint_file_name_validation(self, file_path):
         file_path, file_name = os.path.split(file_path)
         classes = self.get_class_names()
@@ -151,15 +128,6 @@ class DataSetGenerator:
             csvwriter.writeheader()
             csvwriter.writerows(labeled_dictionary)
         return labeled_dictionary
-
-    def get_prnu_file_test(self, file_path):
-        validation_input_prnu_file_names = np.array(glob(str(self.test_dir_prnu) + "/**/*.jpg", recursive = True))
-        classes = self.get_class_names()
-        
-        for prnu_frame_path in validation_input_prnu_file_names:
-            for device in classes:
-                if device in prnu_frame_path and device in file_path:
-                    return prnu_frame_path
 
     def get_noiseprint_file_name_test(self, file_path):
         file_path, file_name = os.path.split(file_path)

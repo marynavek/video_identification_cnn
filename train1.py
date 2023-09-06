@@ -4,8 +4,10 @@ import argparse
 # import tensorflow_datasets as tfds
 import tensorflow as tf
 import numpy as np
+from concat_two_model_net import ConcatTwoModels
 from constrained_net import ConstrainedNet
 from contrained_net_PRNU_transfer import ConstrainedNetPRNU
+from prepare_csv_dataset_noise_patch import DataSetGeneratorNoisePatch
 from preparing_csv_dataset import DataSetGenerator
 # from keras import datasets
 parser = argparse.ArgumentParser(
@@ -24,45 +26,45 @@ parser.add_argument('--width', type=int, required=False, default=800, help='Widt
 parser.add_argument('--constrained', type=int, required=False, default=1, help='Include constrained layer')
 
 def run_locally():
-    fc_size = 1024
-    fc_layers = 2
-    n_epochs = 1
-    cnn_height = 480
-    cnn_width = 800
-    batch_size = 32
-    use_constrained_layer = True
+    # fc_size = 1024
+    # fc_layers = 2
+    # n_epochs = 1
+    # cnn_height = 480
+    # cnn_width = 800
+    # batch_size = 32
+    # use_constrained_layer = True
     # model_path = "/Users/marynavek/Projects/Video_Project/models/ccnn-FC2x1024-480_800-f3-k_s5/fm-e00003.h5"
-    model_path = None
-    model_name = None
-    dataset_path = "/Users/marynavek/Projects/files/patches"
-    dataset_path_prnu = "/Users/marynavek/Projects/files/prnu_dataset"
-    dataset_path_noiseprints = "/Users/marynavek/Projects/files/noise-patches-dataset"
+    
+    noise_dataset = "/Users/marynavek/Projects/files/noise_patches_iframes_minimum_1st_sector_all"
+    reg_patches_dataset = "/Users/marynavek/Projects/files/patches_iframes_minimum_1st_sector_all"
+    reg_patches_model_path = "/Users/marynavek/Projects/video_identification_cnn/bayar_models/reg_patches/sector_1/all/32/FC_Bayayr_model-sector_1/fm-e00043.h5"
+    noise_patches_model_path = "/Users/marynavek/Projects/video_identification_cnn/bayar_models/noise/sector_1/all/32/FC_Bayayr_model-sector_1/fm-e00054.h5"
 
-    return fc_size, fc_layers, n_epochs, cnn_height, cnn_width, batch_size, use_constrained_layer, model_path, model_name, dataset_path, dataset_path_prnu, dataset_path_noiseprints
+    return noise_dataset, reg_patches_dataset, reg_patches_model_path, noise_patches_model_path
 
 if __name__ == "__main__":
     DEBUG = True
 
-    if DEBUG:
-        fc_size, fc_layers, n_epochs, cnn_height, cnn_width, batch_size, use_constrained_layer, model_path, model_name, dataset_path, dataset_path_prnu, dataset_path_noiseprints = run_locally()
-    else:
-        args = parser.parse_args()
-        fc_size = args.fc_size
-        fc_layers = args.fc_layers
-        n_epochs = args.epochs
-        cnn_height = args.height
-        cnn_width = args.width
-        batch_size = args.batch_size
-        use_constrained_layer = args.constrained == 1
-        model_path = args.model_path
-        model_name = args.model_name
-        dataset_path = args.dataset_path
-        dataset_path_prnu = args.dataset_path_prnu
-        dataset_path_noiseprints = args.dataset_path_noiseprints
+    # if DEBUG:
+    noise_dataset, reg_patches_dataset, reg_patches_model_path, noise_patches_model_path = run_locally()
+    # else:
+    #     args = parser.parse_args()
+    #     fc_size = args.fc_size
+    #     fc_layers = args.fc_layers
+    #     n_epochs = args.epochs
+    #     cnn_height = args.height
+    #     cnn_width = args.width
+    #     batch_size = args.batch_size
+    #     use_constrained_layer = args.constrained == 1
+    #     model_path = args.model_path
+    #     model_name = args.model_name
+    #     dataset_path = args.dataset_path
+    #     dataset_path_prnu = args.dataset_path_prnu
+    #     dataset_path_noiseprints = args.dataset_path_noiseprints
 
     #frames dataset creation
-    data_factory = DataSetGenerator(input_dir_frames=dataset_path,
-                            input_dir_noiseprint=dataset_path_noiseprints, input_dir_prnu=dataset_path_prnu)
+    data_factory = DataSetGeneratorNoisePatch(input_dir_frames=noise_dataset,
+                            input_dir_noiseprint=reg_patches_dataset)
 
     num_classes = len(data_factory.get_class_names())
     
@@ -70,14 +72,9 @@ if __name__ == "__main__":
     valid_dataset_dict = data_factory.create_validation_dataset()
 
 
-    constr_net = ConstrainedNetPRNU(constrained_net=use_constrained_layer)
-    if model_path:
-        constr_net.set_model(model_path)
-    else:
-        # Create new model
-        constr_net.create_model(num_classes, fc_layers, fc_size, cnn_height, cnn_width, model_name)
-    
-    print(num_classes)
+    constr_net = ConcatTwoModels(reg_patches_model_path=reg_patches_model_path, noise_patches_model_path=noise_patches_model_path, batches=32, sector="sector_1")
+    constr_net.create_model()
+    # print(num_classes)
     constr_net.print_model_summary()
-    history = constr_net.train(train_ds=train_dataset_dict, val_ds_test=valid_dataset_dict, epochs=n_epochs)
+    history = constr_net.train(train_ds=train_dataset_dict, val_ds_test=valid_dataset_dict)
 

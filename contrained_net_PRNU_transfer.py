@@ -2,20 +2,16 @@ import tensorflow as tf
 import numpy as np
 import os, math
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, Input, concatenate, Reshape, Activation, Flatten, Conv2D, MaxPooling2D, BatchNormalization
+from tensorflow.keras.layers import Dense, Input, concatenate, Activation, Flatten, Conv2D, MaxPooling2D, BatchNormalization
 from tensorflow.keras.callbacks import TensorBoard, Callback
 from keras.constraints import Constraint
 from keras import backend as K
 import tensorflow as tf
-from tensorflow.python import util
-from tensorflow.python.keras import regularizers
-from tensorflow.python.keras.layers.core import Dropout
-from tensorflow.python.ops.gen_array_ops import Reshape, reshape
-import tensorflow_datasets as tfds
-from sklearn import utils
-from keras.regularizers import L2, L1
+
+
 
 from data_generator import DataGenerator
+from data_generator_noise_patch import DataGeneratorNoisePatch
 
 class Constrained3DKernelMinimalPRNU(Constraint):
     def __call__(self, w):
@@ -82,18 +78,20 @@ class Constrained3DKernelMinimalPRNU(Constraint):
 
 
 class ConstrainedNetPRNU:
-    GLOBAL_SAVE_MODEL_DIR = "/Users/marynavek/Projects/video_identification_cnn/models_concat_transfer_noise_patches/"
-    GLOBAL_TENSORBOARD_DIR = "/Users/marynavek/Projects/video_identification_cnn/tensorboard_concat_transfer_noise_patches/"
+    GLOBAL_SAVE_MODEL_DIR = "/Users/marynavek/Projects/video_identification_cnn/models_concat_transfer_noise/"
+    GLOBAL_TENSORBOARD_DIR = "/Users/marynavek/Projects/video_identification_cnn/tensorboard_concat_transfer_noise/"
 
-    def __init__(self, model_path=None, constrained_net=True):
+    def __init__(self, sector, model_path=None, constrained_net=True):
         self.use_TensorBoard = True
         self.model = None
+        self.sector = sector
         self.model_path = None
         if model_path is not None:
             self.set_model(model_path)
 
         self.verbose = False
         self.model_name = None
+        self.lrate = lrate
 
         # Constrained layer properties
         self.constrained_net = constrained_net
@@ -124,11 +122,9 @@ class ConstrainedNetPRNU:
         self.model_path = model_path
         self.model_name = model_name
 
-        # if self.constrained_net:
-        #     self.model = tf.keras.models.load_model(model_path, custom_objects={
-        #         'Constrained3DKernelMinimalPRNU': Constrained3DKernelMinimalPRNU})
+        self.model = tf.keras.models.load_model(model_path, custom_objects={
+                'Constrained3DKernelMinimalPRNU': Constrained3DKernelMinimalPRNU})
         # else:
-        self.model = tf.keras.models.load_model(model_path)
 
         if self.model is None:
             raise ValueError(f"Model could not be loaded from location {model_path}")
@@ -148,82 +144,71 @@ class ConstrainedNetPRNU:
 
         return model_name
 
-    def create_model(self, num_output, fc_layers, fc_size, height=480, width=800, model_name=None):
+    def create_model(self,lrate,height=480, width=800, model_name=None):
 
-        input_shape = (height, width, 3)
+        # input_shape = (height, width, 3)
 
         input_patches = (128, 128, 3)
         input_layer_prnu = Input(shape=input_patches)
         input_layer_frames = Input(shape=input_patches)
         # input_layer_frames = Input(dtype=input_shape)
         
-        if self.constrained_net:
-            cons_layer_prnu = Conv2D(filters=self.constrained_n_filters,
-                                kernel_size=self.constrained_kernel_size,
+        cons_layer_prnu = Conv2D(filters=3,
+                                kernel_size=(5,5),
                                 strides=(1, 1),
-                                input_shape=input_shape,
+                                input_shape=input_patches,
                                 padding="valid", # Intentionally
                                 kernel_constraint=Constrained3DKernelMinimalPRNU(),
                                 name="constrained_layer_prnu")(input_layer_prnu)
 
-        if self.constrained_net:
-            cons_layer_frames = Conv2D(filters=self.constrained_n_filters,
+        
+        cons_layer_frames = Conv2D(filters=self.constrained_n_filters,
                                 kernel_size=self.constrained_kernel_size,
                                 strides=(1, 1),
-                                input_shape=input_shape,
+                                input_shape=input_patches,
                                 padding="valid", # Intentionally
                                 kernel_constraint=Constrained3DKernelMinimalPRNU(),
                                 name="constrained_layer_frames")(input_layer_frames)
 
         # Determine whether to use the input shape parameter
-        if self.constrained_net:
-            conv2d_prnu1 = Conv2D(filters=96, kernel_size=(7, 7), strides=(2, 2), padding="same")(cons_layer_prnu)
-        else:
-            conv2d_prnu1 = Conv2D(filters=96, kernel_size=(7, 7), strides=(2, 2), padding="same")(input_layer_prnu)
-
-
+        conv2d_prnu1 = Conv2D(filters=96, kernel_size=(5, 5), strides=(2, 2), padding="same")(cons_layer_prnu)
         batch1_prnu = BatchNormalization()(conv2d_prnu1)
         activation1_prnu = Activation(tf.keras.activations.tanh)(batch1_prnu)
         max_pool1_prnu = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(activation1_prnu)
 
 
-        con2d_2_prnu = Conv2D(filters=64, kernel_size=(5, 5), strides=(1, 1), padding="same")(max_pool1_prnu)
+        con2d_2_prnu = Conv2D(filters=64, kernel_size=(3, 3), strides=(1, 1), padding="same")(max_pool1_prnu)
         batch2_prnu = BatchNormalization()(con2d_2_prnu)
         activation2_prnu = Activation(tf.keras.activations.tanh)(batch2_prnu)
         max_pool2_prnu = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(activation2_prnu)
                         
-        con2d_3_prnu = Conv2D(filters=64, kernel_size=(5, 5), strides=(1, 1), padding="same")(max_pool2_prnu)
+        con2d_3_prnu = Conv2D(filters=64, kernel_size=(3, 3), strides=(1, 1), padding="same")(max_pool2_prnu)
         batch3_prnu = BatchNormalization()(con2d_3_prnu)
         activation3_prnu = Activation(tf.keras.activations.tanh)(batch3_prnu)
         max_pool3_prnu = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(activation3_prnu)
 
 
-        con2d_4_prnu = Conv2D(filters=128, kernel_size=(1, 1), strides=(1, 1), padding="same", kernel_regularizer=L2(0.01))(max_pool3_prnu)
+        con2d_4_prnu = Conv2D(filters=128, kernel_size=(1, 1), strides=(1, 1), padding="same")(max_pool3_prnu)
         batch4_prnu = BatchNormalization()(con2d_4_prnu)
         activation4_prnu = Activation(tf.keras.activations.tanh)(batch4_prnu)
         max_pool4_prnu = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(activation4_prnu)
 
         flatten_prnu = Flatten()(max_pool4_prnu)
-        dense_prnu = Dense(fc_size, activation=tf.keras.activations.tanh)(flatten_prnu)
+        dense_prnu = Dense(100, activation=tf.keras.activations.tanh)(flatten_prnu)
 
 
-        if self.constrained_net:
-            conv2d_frames1 = Conv2D(filters=96, kernel_size=(7, 7), strides=(2, 2), padding="same")(cons_layer_frames)
-            # model_prnu.add(Conv2D(filters=96, kernel_size=(7, 7), strides=(2, 2), padding="same"))
-        else:
-            conv2d_frames1 = Conv2D(filters=96, kernel_size=(7, 7), strides=(2, 2), padding="same")(input_layer_frames)
-
-
+        conv2d_frames1 = Conv2D(filters=96, kernel_size=(5, 5), strides=(2, 2), padding="same")(cons_layer_frames)
+            
         batch1_frames = BatchNormalization()(conv2d_frames1)
         activation1_frames = Activation(tf.keras.activations.tanh)(batch1_frames)
         max_pool1_frames = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(activation1_frames)
 
-        con2d_2_frames = Conv2D(filters=64, kernel_size=(5, 5), strides=(1, 1), padding="same")(max_pool1_frames)
+        con2d_2_frames = Conv2D(filters=64, kernel_size=(3, 3), strides=(1, 1), padding="same")(max_pool1_frames)
         batch2_frames = BatchNormalization()(con2d_2_frames)
         activation2_frames = Activation(tf.keras.activations.tanh)(batch2_frames)
         max_pool2_frames = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(activation2_frames)
 
-        con2d_3_frames = Conv2D(filters=64, kernel_size=(5, 5), strides=(1, 1), padding="same")(max_pool2_frames)
+        con2d_3_frames = Conv2D(filters=64, kernel_size=(3, 3), strides=(1, 1), padding="same")(max_pool2_frames)
         batch3_frames = BatchNormalization()(con2d_3_frames)
         activation3_frames = Activation(tf.keras.activations.tanh)(batch3_frames)
         max_pool3_frames = MaxPooling2D(pool_size=(3, 3), strides=(2, 2))(activation3_frames)
@@ -235,21 +220,20 @@ class ConstrainedNetPRNU:
 
 
         flatten_frames = Flatten()(max_pool4_frames)
-        dense_frames = Dense(fc_size, activation=tf.keras.activations.tanh)(flatten_frames)
+        dense_frames = Dense(100, activation=tf.keras.activations.tanh)(flatten_frames)
 
         merge_layer = concatenate([dense_prnu, dense_frames], axis=1)
 
       
-        for i in range(fc_layers*2-1):
-
+        for i in range(2):
             if i == 0:
-                output_layer_frames_temp = Dense(fc_size, activation=tf.keras.activations.tanh)(merge_layer)
+                output_layer_frames_temp = Dense(100, activation=tf.keras.activations.tanh)(merge_layer)
             else: 
-                output_layer_frames_temp = Dense(fc_size, activation=tf.keras.activations.tanh)(output_layer_frames_temp)
+                output_layer_frames_temp = Dense(100, activation=tf.keras.activations.tanh)(output_layer_frames_temp)
                    
         final_frames_output_layer = output_layer_frames_temp    
 
-        dense_merged = Dense(5, activation=tf.keras.activations.softmax)(final_frames_output_layer)
+        dense_merged = Dense(6, activation=tf.keras.activations.softmax)(final_frames_output_layer)
         model = Model(inputs=(input_layer_prnu, input_layer_frames), outputs=dense_merged)
 
         # See also learning rate scheduler at the bottom of this script.
@@ -258,12 +242,13 @@ class ConstrainedNetPRNU:
         # model.compile(loss=tf.keras.losses.categorical_crossentropy,
         #               optimizer=opt,
         #               metrics=tf.keras.metrics.Accuracy())
+        opt = tf.keras.optimizers.Adam(learning_rate=0.0001)
         model.compile(loss="categorical_crossentropy",
-                      optimizer="adam",
+                      optimizer=opt,
                       metrics=['accuracy'])
 
         if model_name is None:
-            model_name = self.__generate_model_name(fc_layers, fc_size, height, width)
+            model_name = self.__generate_model_name(2, 100, height, width)
 
         self.model_name = model_name
         self.model = model
@@ -281,7 +266,7 @@ class ConstrainedNetPRNU:
             raise ValueError("Model has no name specified. This is required in order to save TensorBoard log-files.")
 
         # Create directory if not exists
-        path = os.path.join(self.GLOBAL_TENSORBOARD_DIR, self.model_name)
+        path = os.path.join(self.GLOBAL_TENSORBOARD_DIR, str(self.sector), self.model_name)
         if not os.path.exists(path):
             os.makedirs(path)
 
@@ -292,7 +277,7 @@ class ConstrainedNetPRNU:
             raise ValueError("Model has no name specified. This is required in order to save checkpoints.")
 
         # Create directory if not exists
-        path = os.path.join(self.GLOBAL_SAVE_MODEL_DIR, self.model_name)
+        path = os.path.join(self.GLOBAL_SAVE_MODEL_DIR, str(self.sector), self.model_name)
         if not os.path.exists(path):
             os.makedirs(path)
 
@@ -319,20 +304,18 @@ class ConstrainedNetPRNU:
 
         return 0
        
-    def train(self, train_ds, val_ds_test, epochs=1):
+    def train(self, train_ds, val_ds_test):
         if self.model is None:
             raise ValueError("Cannot start training! self.model is None!")
 
         callbacks = self.get_callbacks()
 
-        self.model.fit(DataGenerator(train_ds),
-                            epochs=10,
+        return self.model.fit(DataGeneratorNoisePatch(train_ds),
+                            epochs=70,
                             verbose=1,
                             initial_epoch=0,
-                            validation_data=DataGenerator(val_ds_test, shuffle=False),
+                            validation_data=DataGeneratorNoisePatch(val_ds_test, shuffle=False),
                             callbacks=callbacks)
-
-
 
     def get_callbacks(self):
         default_file_name = "fm-e{epoch:05d}.h5"
@@ -343,10 +326,13 @@ class ConstrainedNetPRNU:
                                                          save_weights_only=False,
                                                          period=1)
 
+        # reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
+        #                       patience=5, min_lr=0.001)
+
         tensorboard_cb = TensorBoard(log_dir=self.get_tensorboard_path())
         print_lr_cb = PrintLearningRate()
 
-        return [save_model_cb, tensorboard_cb, print_lr_cb]
+        return [save_model_cb, print_lr_cb, tensorboard_cb]
 
     def evaluate(self, test_ds, model_path=None):
         if model_path is not None:

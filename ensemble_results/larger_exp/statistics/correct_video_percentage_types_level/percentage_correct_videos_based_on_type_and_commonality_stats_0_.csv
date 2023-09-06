@@ -1,0 +1,10 @@
+Video Type,Total Videos,Correct Videos,Percentage
+flat,40,40,1.0
+flatWA,0,0,0
+flatYT,20,20,1.0
+indoor,39,23,0.5897435897435898
+indoorWA,0,0,0
+indoorYT,19,11,0.5789473684210527
+outdoor,36,22,0.6111111111111112
+outdoorWA,0,0,0
+outdoorYT,18,11,0.6111111111111112

@@ -2,10 +2,8 @@ import os
 
 import argparse
 
-from data_factory import DataFactory
 from frame_prediction_stats import FramePredictionStatistics
 from new_predict_frames import PredictFrames
-# from predict_frames import FramePredictor
 from frame_prediction_vizualization import FramePredictionVis
 from preparing_csv_dataset import DataSetGenerator
 
@@ -126,19 +124,19 @@ if __name__ == "__main__":
         # video_pred_file = video_predictor.start(frame_pred_file)
         # print(f"{model_file} | Predicting videos completed")
 
-    print(f"Creating Statistics and Visualizations ...")
-    # Create Frame Prediction Statistics
-    fps =  FramePredictionStatistics(result_dir=frames_res_dir)
-    frame_stats = fps.start()
-    print(f"Frame Prediction Statistics Completed")
+    # print(f"Creating Statistics and Visualizations ...")
+    # # Create Frame Prediction Statistics
+    # fps =  FramePredictionStatistics(result_dir=frames_res_dir)
+    # frame_stats = fps.start()
+    # print(f"Frame Prediction Statistics Completed")
 
     # vps = VideoPredictionStatistics(result_dir=videos_res_dir)
     # video_stats = vps.start()
     # print(f"Video Prediction Statistics Completed")
 
-    fpv = FramePredictionVis(result_dir=plots_res_dir)
-    fpv.start(frame_stats)
-    print(f"Frame Prediction Visualization Completed")
+    # fpv = FramePredictionVis(result_dir=plots_res_dir)
+    # fpv.start(frame_stats)
+    # print(f"Frame Prediction Visualization Completed")
 
     # vpv = VideoPredictionVis(result_dir=plots_res_dir, model_name=model_name)
     # vpv.start(video_stats)

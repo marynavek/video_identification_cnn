@@ -6,6 +6,10 @@ from constrained_net import Constrained3DKernelMinimal
 from contrained_net_PRNU_transfer import Constrained3DKernelMinimalPRNU
 from data_generator import DataGenerator
 import matplotlib.pyplot as plt
+from data_generator_noise_patch import DataGeneratorNoisePatch
+
+from data_generator_singular import DataGeneratorSingular
+from new_model import Constrained3DKernelMinimalTransfer
 
 class PredictFrames():
     
@@ -24,27 +28,24 @@ class PredictFrames():
             self.model = tf.keras.models.load_model(model_path)
 
 
-    def start_predictions(self, test_dictionary):
+    def start_predictions(self, test_dictionary, batch_size):
         print("Starting predictions for "+ self.model_fname + " model.") 
 
         output_file = self.__get_output_file()
 
-        return self.__predict_and_save(test_dictionary=test_dictionary, output_file=output_file)
+        return self.__predict_and_save(test_dictionary=test_dictionary, output_file=output_file,batch_size=batch_size)
 
     def __get_output_file(self):
         output_file = f"{self.model_fname.split('.')[0]}_F_predictions.csv"
         return os.path.join(self.result_dir, output_file)
 
-    def __predict_and_save(self, test_dictionary, output_file):
-        predict_ds_generator = DataGenerator(test_dictionary, shuffle=False, to_fit=False)
+    def __predict_and_save(self, test_dictionary, output_file, batch_size):
+        predict_ds_generator = DataGeneratorNoisePatch(test_dictionary,batch_size=batch_size, shuffle=False, to_fit=False)
 
         #get actual labels and frames_names
         actual_encoded_labels, frames_list = self.__get_files_names_and_labels(test_dictionary)
 
         predictions = self.model.predict(predict_ds_generator)
-
-        # cce = tf.losses.categorical_crossentropy(reduction=tf.keras.losses.Reduction.NONE)
-        # cce_losses = cce(actual_encoded_labels, predictions).numpy()
 
         predicted_labels = np.argmax(predictions, axis = 1)
         actual_labels = [np.argmax(x) for x in actual_encoded_labels]

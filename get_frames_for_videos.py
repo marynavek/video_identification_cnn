@@ -4,8 +4,8 @@ from posix import listdir
 from posixpath import join
 
 
-INPUT_DIR = "/Users/marynavek/Projects/files/Videos"
-OUTPUT_DIR = "/Users/marynavek/Projects/files/IFrames"
+INPUT_DIR = "/Users/marynavek/Projects/files/15_devices_videos"
+OUTPUT_DIR = "/Users/marynavek/Projects/files/15_devices_all_frames"
 DEVICES = [item for item in os.listdir(INPUT_DIR) if os.path.isdir(os.path.join(INPUT_DIR, item))]
 
 print(DEVICES)
@@ -26,8 +26,27 @@ for device in DEVICES:
 
         VIDEO_NAMES = [item for item in os.listdir(video_type_folder) if os.path.isfile(os.path.join(video_type_folder, item))]
 
-        outputPath = os.path.join(OUTPUT_DIR, device, video_type)
-            
+        
+        if "flat"  == video_type:
+            new_video_type = "__flat__"
+        elif "flatWA" == video_type:
+            new_video_type = "__flat__"
+        elif "flatYT" == video_type:
+            new_video_type = "__flat__"
+        elif "indoor" == video_type:
+            new_video_type = "__indoor__"
+        elif "indoorWA" == video_type:
+            new_video_type = "__indoor__"
+        elif "indoorYT" == video_type:
+            new_video_type = "__indoor__"
+        elif "outdoor" == video_type:
+            new_video_type = "__outdoor__"
+        elif "outdoorWA" == video_type:
+            new_video_type = "__outdoor__"
+        elif "outdoorYT" == video_type:
+            new_video_type = "__outdoor__"
+        
+        outputPath = os.path.join(OUTPUT_DIR, device, new_video_type)
         if not os.path.isdir(outputPath):
             os.makedirs(outputPath)
 
@@ -36,12 +55,14 @@ for device in DEVICES:
         for video in VIDEO_NAMES:
 
             output_video_folder_name = video.split(".")[0]
+            
+            
             output_video_path = os.path.join(outputPath, output_video_folder_name)
             if not os.path.isdir(output_video_path):
                 os.makedirs(output_video_path)
 
             video_path = os.path.join(video_type_folder, video)
             print("Extracting frames for " + video)
-            os.system("sudo python3 iframe.py -i " + video_path + " -p " + output_video_path) 
+            os.system("sudo python3 iframe.py -i " + video_path + " -p " + output_video_path + " -o " + video_type + " -c " + video) 
 
             

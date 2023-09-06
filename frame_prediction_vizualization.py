@@ -16,7 +16,8 @@ class FramePredictionVis:
 
         img_scenario = self.__plot_scenario(df_frame_pred)
         img_scenario.savefig(os.path.join(self.result_dir, f"{self.model_name}_f_scenario_results.png"))
-
+        img_platform = self.__plot_platform(df_frame_pred)
+        img_platform.savefig(os.path.join(self.result_dir, f"{self.model_name}_f_platform_results.png"))
 
     def __plot_platform(self, df):
         plt.figure(figsize=(15, 10))

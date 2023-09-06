@@ -1,0 +1,13 @@
+Video Type,Total Videos,Correct Videos,Percentage
+flat,28,25,0.8928571428571429
+flatWA,0,0,0
+flatYT,0,0,0
+indoor,29,21,0.7241379310344828
+indoorWA,0,0,0
+indoorYT,0,0,0
+outdoor,28,26,0.9285714285714286
+outdoorWA,0,0,0
+outdoorYT,0,0,0
+flat_native,28,25,0.8928571428571429
+indoor_native,29,21,0.7241379310344828
+outdoor_native,28,26,0.9285714285714286

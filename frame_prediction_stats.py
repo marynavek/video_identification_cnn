@@ -5,8 +5,9 @@ import pandas as pd
 
 class FramePredictionStatistics:
 
-    def __init__(self, result_dir):
+    def __init__(self, result_dir, save_dir):
         self.result_dir = result_dir
+        self.save_dir = save_dir
 
     def start(self):
         files = self.__get_frame_pred_files()
@@ -26,7 +27,7 @@ class FramePredictionStatistics:
         df_global_statistics.index = df_global_statistics.index + 1  # shifting index
         df_global_statistics = df_global_statistics.sort_index()  # sorting by index
 
-        output_file = os.path.join(self.result_dir, f"F_prediction_stats.csv")
+        output_file = os.path.join(self.save_dir, f"F_prediction_stats.csv")
         df_global_statistics.to_csv(output_file, index=False)
 
         return output_file

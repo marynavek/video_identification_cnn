@@ -15,11 +15,13 @@ def main(argv):
     oString = 'out'
     usage = 'usage: python iframe.py -i <inputfile> [-o <oString>]'
     oPath = ''
+    videoType = ''
+    videoName = ''
 
    
     
     try:
-        opts, args = getopt.getopt(argv,"hi:p:o",["ifile=","oPath=","oString="])
+        opts, args = getopt.getopt(argv,"hi:p:o:c:d:",["ifile=","oPath=","videoType=","videoName=","oString="])
     except getopt.getopt.GetoptError:
         print (usage)
         sys.exit(2)
@@ -32,12 +34,17 @@ def main(argv):
             inFile = arg
         elif opt in ("-p", "--oPath"):
             oPath = arg
-        elif opt in ("-o", "--oString"):
+        elif opt in ("-o", "--videoType"):
+            videoType = arg
+        elif opt in ("-c", "--videoName"):
+            videoName = arg
+        elif opt in ("-d", "--videoName"):
             oString = arg
         
         print('Input file is ' + inFile)
         print('oString is ' + oString)
-        print('oPath is ' + oPath)
+        print('videoType is ' + videoType)
+        print('videoName is ' + videoName)
 
     if inFile == '':
         print (usage)
@@ -47,9 +54,11 @@ def main(argv):
     ffmpeg = '/usr/local/bin/ffmpeg'
     # # path = os.path.join(os.getcwd() + ffmpeg)
     # # os.mkdir(path)
-    outFile = oString + '%03d.jpg'
-    outFilePath = os.path.join(oPath, outFile)
+    outFile = videoName + '_%03d.jpg'
     
+        
+    outFilePath = os.path.join(oPath, outFile)
+        
     cmd = [ffmpeg,'-i', inFile,'-f', 'image2','-vf', 
                "select='eq(pict_type,PICT_TYPE_I)'",'-vsync','vfr',outFilePath]
 
